@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+/* Configuration des sources pour Tailwind */
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    /* Thèmes administrateurs */
+    .theme-admin-1 {
+        --primary-color: #1e3a8a;
+    }
+    .theme-admin-2 {
+        --primary-color: #065f46;
+    }
+    .theme-admin-3 {
+        --primary-color: #92400e;
+    }
+    .theme-admin-4 {
+        --primary-color: #7f1d1d;
+    }
+    /* Couleur principale dynamique */
+    .bg-admin {
+        background-color: var(--primary-color) !important;
+    }
+    .text-admin {
+        color: var(--primary-color) !important;
+    }
+    .border-admin {
+        border-color: var(--primary-color) !important;
+    }
+    .hover\:bg-admin:hover {
+        background-color: var(--primary-color) !important;
+    }
+    /* Menu actif */
+    .active-admin {
+        border-left: 4px solid var(--primary-color);
+        background-color: color-mix( in srgb, var(--primary-color) 10%, transparent);
+    }
+}

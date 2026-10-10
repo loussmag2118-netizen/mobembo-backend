@@ -447,6 +447,109 @@ class CanadianClientController extends Controller
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // ⭐ DÉTAIL D'UNE RÉSERVATION
+    // GET /api/canadian/reservations/{id}
+    // ═══════════════════════════════════════════════════════════════
+    public function showReservation(Request $request, $id)
+    {
+        try {
+            $reservation = Reservation::with('vol')
+                ->where('id', $id)
+                ->where('canadian_user_id', $request->user()->id)
+                ->first();
+
+            if (!$reservation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Réservation introuvable.',
+                ], 404);
+            }
+
+            return response()->json([
+                'success'     => true,
+                'reservation' => [
+                    'id'               => $reservation->id,
+                    'reference'        => $reservation->reference ?? ('R-' . str_pad($reservation->id, 6, '0', STR_PAD_LEFT)),
+                    'code_pnr'         => $reservation->code_pnr,
+                    'nombre_places'    => (int) $reservation->nombre_places,
+                    'montant_total'    => (float) ($reservation->montant_total ?? 0),
+                    'statut'           => $reservation->statut,
+                    'date_reservation' => $reservation->created_at ? $reservation->created_at->toIso8601String() : null,
+                    'vol'              => $reservation->vol ? $this->formatVol($reservation->vol) : null,
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur : ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ LISTE DES EXTRAS DISPONIBLES
+    // GET /api/canadian/extras
+    // ═══════════════════════════════════════════════════════════════
+    public function listExtras(Request $request)
+    {
+        try {
+            $extras = \App\Models\Extra::orderBy('ordre')
+                ->get()
+                ->map(fn($e) => [
+                    'id'          => $e->id,
+                    'nom'         => $e->nom,
+                    'description' => $e->description,
+                    'prix'        => (float) ($e->prix ?? 0),
+                    'icone'       => $e->icone,
+                ])
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'extras'  => $extras,
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'extras'  => [],
+                'message' => 'Erreur : ' . $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ⭐ MARQUER UNE NOTIFICATION COMME LUE
+    // PATCH /api/canadian/notifications/{id}/lu
+    // ═══════════════════════════════════════════════════════════════
+    public function marquerNotificationLue(Request $request, $id)
+    {
+        try {
+            $notif = \App\Models\Notification::where('id', $id)
+                ->where('canadian_user_id', $request->user()->id)
+                ->first();
+
+            if (!$notif) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Notification introuvable.',
+                ], 404);
+            }
+
+            $notif->update(['lu' => true]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification marquée comme lue.',
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur : ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // ⭐ FORMATAGE D'UN VOL POUR FLUTTER
     // ═══════════════════════════════════════════════════════════════
     private function formatVol($vol): array

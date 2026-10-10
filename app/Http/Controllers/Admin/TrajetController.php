@@ -334,4 +334,49 @@ class TrajetController extends Controller
             'Accès non autorisé à ce trajet.'
         );
     }
+
+    /**
+     * ⭐ API Mobile : Liste des trajets en JSON.
+     * GET /api/trajets
+     */
+    public function apiIndex(Request $request)
+    {
+        try {
+            $agenceNom = $request->query('agence');
+
+            $query = Trajet::with(['gareDepart', 'gareArrivee', 'vagues', 'bus']);
+
+            if ($agenceNom) {
+                $query->whereHas('agence', function ($q) use ($agenceNom) {
+                    $q->where('nom_agence', 'LIKE', "%{$agenceNom}%");
+                });
+            }
+
+            $trajets = $query->get()->map(fn($t) => [
+                'id'              => $t->id,
+                'ville_depart'    => $t->ville_depart,
+                'ville_arrivee'   => $t->ville_arrivee,
+                'gare_depart_id'  => $t->gare_depart_id,
+                'gare_arrivee_id' => $t->gare_arrivee_id,
+                'agence_id'       => $t->agence_id,
+                'prix'            => $t->prix,
+                'duree_estimee'   => $t->duree_estimee,
+                'gare_depart'     => $t->gareDepart ? [
+                    'id'       => $t->gareDepart->id,
+                    'nom_gare' => $t->gareDepart->nom_gare,
+                    'ville'    => $t->gareDepart->ville,
+                ] : null,
+                'gare_arrivee' => $t->gareArrivee ? [
+                    'id'       => $t->gareArrivee->id,
+                    'nom_gare' => $t->gareArrivee->nom_gare,
+                    'ville'    => $t->gareArrivee->ville,
+                ] : null,
+                'horaires' => $t->vagues->pluck('heure_depart')->values(),
+            ])->values();
+
+            return response()->json($trajets, 200);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Erreur : ' . $e->getMessage()], 500);
+        }
+    }
 }

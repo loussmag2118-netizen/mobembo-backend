@@ -83,6 +83,36 @@ class GareController extends Controller
     }
 
     /**
+     * ⭐ API Mobile : Retourne la liste des gares en JSON.
+     * GET /api/gares
+     */
+    public function apiIndex(Request $request)
+    {
+        try {
+            $agenceNom = $request->query('agence');
+
+            $query = Gare::orderBy('nom_gare');
+
+            if ($agenceNom) {
+                $query->whereHas('agence', function ($q) use ($agenceNom) {
+                    $q->where('nom_agence', 'LIKE', "%{$agenceNom}%");
+                });
+            }
+
+            $gares = $query->get()->map(fn($g) => [
+                'id'       => $g->id,
+                'nom_gare' => $g->nom_gare,
+                'ville'    => $g->ville,
+                'agence_id'=> $g->agence_id,
+            ])->values();
+
+            return response()->json($gares, 200);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Erreur : ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Vérification de sécurité : s'assure que la gare appartient bien à l'agence de l'administrateur connecté.
      */
     private function authorizeAgence(Gare $gare): void

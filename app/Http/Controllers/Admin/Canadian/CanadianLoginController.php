@@ -7,6 +7,7 @@ use App\Models\CanadianUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class CanadianLoginController extends Controller
@@ -24,9 +25,9 @@ class CanadianLoginController extends Controller
      */
     public function login(Request $request)
     {
-        \Log::info('=== LOGIN CANADIAN START ===');
-        \Log::info('email reçu   : [' . $request->input('email') . ']');
-        \Log::info('password reçu: [' . $request->input('password') . ']');
+        Log::info('=== LOGIN CANADIAN START ===');
+        Log::info('email reçu   : [' . $request->input('email') . ']');
+        Log::info('password reçu: [' . $request->input('password') . ']');
 
         // ─────────────────────────────────────────────────────────────
         // 1. Validation
@@ -42,7 +43,7 @@ class CanadianLoginController extends Controller
         ]);
 
         if ($validator->fails()) {
-            \Log::info('VALIDATION FAILED: ' . json_encode($validator->errors()->toArray()));
+            Log::info('VALIDATION FAILED: ' . json_encode($validator->errors()->toArray()));
             return back()
                 ->withErrors($validator)
                 ->onlyInput('email');
@@ -57,7 +58,7 @@ class CanadianLoginController extends Controller
         $telNormalise = preg_replace('/^\+?242/', '', $emailOuTel);
         $telAvecZero  = '0' . ltrim($telNormalise, '0');
 
-        \Log::info('Recherche user avec : emailOuTel=[' . $emailOuTel . '] telNormalise=[' . $telNormalise . '] telAvecZero=[' . $telAvecZero . ']');
+        Log::info('Recherche user avec : emailOuTel=[' . $emailOuTel . '] telNormalise=[' . $telNormalise . '] telAvecZero=[' . $telAvecZero . ']');
 
         // ─────────────────────────────────────────────────────────────
         // 3. Recherche
@@ -69,10 +70,10 @@ class CanadianLoginController extends Controller
             ->orWhere('telephone', '+242' . ltrim($telNormalise, '0'))
             ->first();
 
-        \Log::info('USER TROUVÉ: ' . ($user ? 'OUI id=' . $user->id . ' tel=' . $user->telephone . ' email=' . $user->email : 'NON'));
+        Log::info('USER TROUVÉ: ' . ($user ? 'OUI id=' . $user->id . ' tel=' . $user->telephone . ' email=' . $user->email : 'NON'));
 
         if (!$user) {
-            \Log::info('→ USER NOT FOUND, on renvoie erreur');
+            Log::info('→ USER NOT FOUND, on renvoie erreur');
             return back()->withErrors([
                 'email' => 'Les identifiants fournis ne correspondent pas à nos enregistrements.',
             ])->onlyInput('email');
@@ -82,11 +83,11 @@ class CanadianLoginController extends Controller
         // 4. Vérification mot de passe
         // ─────────────────────────────────────────────────────────────
         $hashOk = Hash::check($password, $user->password);
-        \Log::info('HASH CHECK: ' . ($hashOk ? 'OUI' : 'NON'));
-        \Log::info('Hash en base (30 car.): ' . substr($user->password, 0, 30));
+        Log::info('HASH CHECK: ' . ($hashOk ? 'OUI' : 'NON'));
+        Log::info('Hash en base (30 car.): ' . substr($user->password, 0, 30));
 
         if (!$hashOk) {
-            \Log::info('→ Mauvais mot de passe, on renvoie erreur');
+            Log::info('→ Mauvais mot de passe, on renvoie erreur');
             return back()->withErrors([
                 'email' => 'Les identifiants fournis ne correspondent pas à nos enregistrements.',
             ])->onlyInput('email');
@@ -98,8 +99,8 @@ class CanadianLoginController extends Controller
         Auth::guard('canadian')->login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        \Log::info('LOGIN OK → redirect vers ' . route('canadian.admin'));
-        \Log::info('=== LOGIN CANADIAN END (SUCCESS) ===');
+        Log::info('LOGIN OK → redirect vers ' . route('canadian.admin'));
+        Log::info('=== LOGIN CANADIAN END (SUCCESS) ===');
 
         return redirect()->intended(route('canadian.admin'));
     }

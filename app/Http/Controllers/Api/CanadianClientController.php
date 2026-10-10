@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Extra;
 use App\Models\Vol;
 use App\Models\Reservation;
 use App\Models\Notification;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CanadianClientController extends Controller
 {
@@ -41,7 +43,7 @@ class CanadianClientController extends Controller
                 'villes'  => $villes,
                 'vols'    => $vols,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur : ' . $e->getMessage(),
@@ -108,7 +110,7 @@ class CanadianClientController extends Controller
                 'success' => true,
                 'vols'    => $vols,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur : ' . $e->getMessage(),
@@ -205,7 +207,7 @@ class CanadianClientController extends Controller
                 'reservation' => $reservation->load('vol'),
                 'reference'   => $reference,
             ], 201);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -251,7 +253,7 @@ class CanadianClientController extends Controller
                 'success'      => true,
                 'reservations' => $reservations,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success'      => false,
                 'message'      => 'Erreur : ' . $e->getMessage(),
@@ -366,7 +368,7 @@ class CanadianClientController extends Controller
                 'methode'        => $methodeAdmin,
             ], 200);
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
@@ -405,7 +407,7 @@ class CanadianClientController extends Controller
                 'success'       => true,
                 'notifications' => $notifs,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success'       => true,
                 'notifications' => [],
@@ -478,7 +480,7 @@ class CanadianClientController extends Controller
                     'vol'              => $reservation->vol ? $this->formatVol($reservation->vol) : null,
                 ],
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur : ' . $e->getMessage(),
@@ -493,7 +495,7 @@ class CanadianClientController extends Controller
     public function listExtras(Request $request)
     {
         try {
-            $extras = \App\Models\Extra::orderBy('ordre')
+            $extras = Extra::orderBy('ordre')
                 ->get()
                 ->map(fn($e) => [
                     'id'          => $e->id,
@@ -508,7 +510,7 @@ class CanadianClientController extends Controller
                 'success' => true,
                 'extras'  => $extras,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'extras'  => [],
@@ -524,7 +526,7 @@ class CanadianClientController extends Controller
     public function marquerNotificationLue(Request $request, $id)
     {
         try {
-            $notif = \App\Models\Notification::where('id', $id)
+            $notif = Notification::where('id', $id)
                 ->where('canadian_user_id', $request->user()->id)
                 ->first();
 
@@ -541,7 +543,7 @@ class CanadianClientController extends Controller
                 'success' => true,
                 'message' => 'Notification marquée comme lue.',
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur : ' . $e->getMessage(),

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class TrajetController extends Controller
 {
@@ -375,7 +376,7 @@ class TrajetController extends Controller
             ])->values();
 
             return response()->json($trajets, 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json(['message' => 'Erreur : ' . $e->getMessage()], 500);
         }
     }

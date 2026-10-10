@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Gare;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 class GareController extends Controller
 {
@@ -107,7 +108,7 @@ class GareController extends Controller
             ])->values();
 
             return response()->json($gares, 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json(['message' => 'Erreur : ' . $e->getMessage()], 500);
         }
     }

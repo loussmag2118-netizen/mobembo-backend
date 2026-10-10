@@ -7,6 +7,7 @@ use App\Models\ClasseTarifaire;
 use App\Models\Extra;
 use App\Models\Vol;
 use App\Models\Ville;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class VolController extends Controller
@@ -55,8 +56,8 @@ class VolController extends Controller
         unset($validated['heure_depart'], $validated['heure_arrivee']);
 
         // Durée en minutes
-        $dep = \Carbon\Carbon::parse($validated['date_depart']);
-        $arr = \Carbon\Carbon::parse($validated['date_arrivee']);
+        $dep = Carbon::parse($validated['date_depart']);
+        $arr = Carbon::parse($validated['date_arrivee']);
         $validated['duree_minutes'] = $dep->diffInMinutes($arr);
 
         Vol::create($validated);
@@ -111,8 +112,8 @@ class VolController extends Controller
         $validated['date_arrivee'] = $validated['date_arrivee'] . ' ' . $validated['heure_arrivee'] . ':00';
         unset($validated['heure_depart'], $validated['heure_arrivee']);
 
-        $dep = \Carbon\Carbon::parse($validated['date_depart']);
-        $arr = \Carbon\Carbon::parse($validated['date_arrivee']);
+        $dep = Carbon::parse($validated['date_depart']);
+        $arr = Carbon::parse($validated['date_arrivee']);
         $validated['duree_minutes'] = $dep->diffInMinutes($arr);
 
         $vol->update($validated);

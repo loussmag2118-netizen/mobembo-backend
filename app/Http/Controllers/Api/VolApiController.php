@@ -7,7 +7,9 @@ use App\Models\ClasseTarifaire;
 use App\Models\Extra;
 use App\Models\Vol;
 use App\Models\Ville;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Throwable;
 
 class VolApiController extends Controller
 {
@@ -54,8 +56,8 @@ class VolApiController extends Controller
         $validated['date_arrivee'] = $validated['date_arrivee'] . ' ' . $validated['heure_arrivee'] . ':00';
         unset($validated['heure_depart'], $validated['heure_arrivee']);
 
-        $dep = \Carbon\Carbon::parse($validated['date_depart']);
-        $arr = \Carbon\Carbon::parse($validated['date_arrivee']);
+        $dep = Carbon::parse($validated['date_depart']);
+        $arr = Carbon::parse($validated['date_arrivee']);
         $validated['duree_minutes'] = $dep->diffInMinutes($arr);
 
         Vol::create($validated);
@@ -111,8 +113,8 @@ class VolApiController extends Controller
         $validated['date_arrivee'] = $validated['date_arrivee'] . ' ' . $validated['heure_arrivee'] . ':00';
         unset($validated['heure_depart'], $validated['heure_arrivee']);
 
-        $dep = \Carbon\Carbon::parse($validated['date_depart']);
-        $arr = \Carbon\Carbon::parse($validated['date_arrivee']);
+        $dep = Carbon::parse($validated['date_depart']);
+        $arr = Carbon::parse($validated['date_arrivee']);
         $validated['duree_minutes'] = $dep->diffInMinutes($arr);
 
         $vol->update($validated);
@@ -167,7 +169,7 @@ class VolApiController extends Controller
                 'success' => true,
                 'vols'    => $vols,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur : ' . $e->getMessage(),
@@ -192,7 +194,7 @@ class VolApiController extends Controller
                 'success' => true,
                 'villes'  => $villes,
             ], 200);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'villes'  => [],
@@ -205,8 +207,8 @@ class VolApiController extends Controller
      */
     private function formatVolPublic($vol): array
     {
-        $dateDepart  = !empty($vol->date_depart)  ? \Carbon\Carbon::parse($vol->date_depart)  : null;
-        $dateArrivee = !empty($vol->date_arrivee) ? \Carbon\Carbon::parse($vol->date_arrivee) : null;
+        $dateDepart  = !empty($vol->date_depart)  ? Carbon::parse($vol->date_depart)  : null;
+        $dateArrivee = !empty($vol->date_arrivee) ? Carbon::parse($vol->date_arrivee) : null;
 
         $duree = '';
         if ($dateDepart && $dateArrivee) {

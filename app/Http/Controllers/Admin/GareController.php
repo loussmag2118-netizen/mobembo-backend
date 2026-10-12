@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Gare;
+use App\Models\Trajet;
+use App\Models\VilleTerrestre;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class GareController extends Controller
@@ -15,7 +18,10 @@ class GareController extends Controller
      */
     public function index()
     {
-        $gares = Gare::where('agence_id', Auth::user()->agence_id)->get();
+        $gares = Gare::where('agence_id', Auth::user()->agence_id)
+            ->orderBy('ville')
+            ->orderBy('nom_gare')
+            ->get();
         return view('admin.gares.index', compact('gares'));
     }
 
@@ -24,7 +30,8 @@ class GareController extends Controller
      */
     public function create()
     {
-        return view('admin.gares.create');
+        $villes = $this->villesProposees();
+        return view('admin.gares.create', compact('villes'));
     }
 
     /**
@@ -32,15 +39,13 @@ class GareController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'nom_gare' => 'required|string|max:100',
-            'ville' => 'required|string|max:100', // <--- Modifié pour accepter toute saisie libre de l'admin
-        ]);
+        $ville = $this->validerVille($request);
 
         Gare::create([
             'agence_id' => Auth::user()->agence_id,
-            'nom_gare' => $request->nom_gare,
-            'ville' => $request->ville,
+            'ville_id'  => $ville->id,
+            'nom_gare'  => trim($request->nom_gare),
+            'ville'     => $ville->nom,
         ]);
 
         return redirect()->route('admin.gares.index')->with('success', 'Gare ajoutée avec succès.');
@@ -52,7 +57,8 @@ class GareController extends Controller
     public function edit(Gare $gare)
     {
         $this->authorizeAgence($gare);
-        return view('admin.gares.edit', compact('gare'));
+        $villes = $this->villesProposees($gare);
+        return view('admin.gares.edit', compact('gare', 'villes'));
     }
 
     /**
@@ -62,12 +68,17 @@ class GareController extends Controller
     {
         $this->authorizeAgence($gare);
 
-        $request->validate([
-            'nom_gare' => 'required|string|max:100',
-            'ville' => 'required|string|max:100', // <--- Modifié pour accepter toute saisie libre de l'admin
+        $ville = $this->validerVille($request, $gare);
+
+        $gare->update([
+            'ville_id' => $ville->id,
+            'nom_gare' => trim($request->nom_gare),
+            'ville'    => $ville->nom,
         ]);
 
-        $gare->update($request->only('nom_gare', 'ville'));
+        // Les trajets reprennent la ville de leurs gares
+        Trajet::where('gare_depart_id', $gare->id)->update(['ville_depart' => $ville->nom]);
+        Trajet::where('gare_arrivee_id', $gare->id)->update(['ville_arrivee' => $ville->nom]);
 
         return redirect()->route('admin.gares.index')->with('success', 'Gare mise à jour avec succès.');
     }
@@ -103,6 +114,7 @@ class GareController extends Controller
             $gares = $query->get()->map(fn($g) => [
                 'id'       => $g->id,
                 'nom_gare' => $g->nom_gare,
+                'ville_id' => $g->ville_id,
                 'ville'    => $g->ville,
                 'agence_id'=> $g->agence_id,
             ])->values();
@@ -111,6 +123,53 @@ class GareController extends Controller
         } catch (Throwable $e) {
             return response()->json(['message' => 'Erreur : ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Villes proposées dans le formulaire : les villes actives du référentiel
+     * (géré par le Super Admin), plus la ville actuelle de la gare si elle a été désactivée.
+     */
+    private function villesProposees(?Gare $gare = null)
+    {
+        return VilleTerrestre::where('actif', true)
+            ->when($gare?->ville_id, fn ($q, $id) => $q->orWhere('id', $id))
+            ->orderBy('nom')
+            ->get();
+    }
+
+    /**
+     * Valide le formulaire et retourne la ville choisie.
+     */
+    private function validerVille(Request $request, ?Gare $gare = null): VilleTerrestre
+    {
+        $request->validate([
+            'nom_gare' => 'required|string|max:100',
+            'ville_id' => 'required|integer',
+        ], [
+            'ville_id.required' => 'Veuillez choisir la ville de la gare.',
+        ]);
+
+        $ville = $this->villesProposees($gare)->firstWhere('id', (int) $request->ville_id);
+
+        if (!$ville) {
+            throw ValidationException::withMessages([
+                'ville_id' => 'Cette ville n\'est pas disponible. Contactez le Super Admin pour l\'ajouter.',
+            ]);
+        }
+
+        $doublon = Gare::where('agence_id', Auth::user()->agence_id)
+            ->where('nom_gare', trim($request->nom_gare))
+            ->where('ville', $ville->nom)
+            ->when($gare, fn ($q) => $q->where('id', '!=', $gare->id))
+            ->exists();
+
+        if ($doublon) {
+            throw ValidationException::withMessages([
+                'nom_gare' => "Votre agence a déjà une gare portant ce nom à {$ville->nom}.",
+            ]);
+        }
+
+        return $ville;
     }
 
     /**

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class TrajetController extends Controller
@@ -37,6 +38,7 @@ class TrajetController extends Controller
         $agenceId = Auth::user()->agence_id;
 
         $gares = Gare::where('agence_id', $agenceId)
+            ->orderBy('ville')
             ->orderBy('nom_gare')
             ->get();
 
@@ -56,7 +58,6 @@ class TrajetController extends Controller
         $agenceId = Auth::user()->agence_id;
 
         $request->validate([
-            'ville_depart'    => 'required|string|max:100',
             'gare_depart_id'  => [
                 'required', 'exists:gares,id',
                 // 🔑 Unicité combinée : (agence_id, gare_depart_id, gare_arrivee_id)
@@ -70,7 +71,6 @@ class TrajetController extends Controller
                     }
                 },
             ],
-            'ville_arrivee'   => 'required|string|max:100|different:ville_depart',
             'gare_arrivee_id' => [
                 'required', 'exists:gares,id', 'different:gare_depart_id',
                 function ($attr, $value, $fail) use ($agenceId) {
@@ -94,15 +94,16 @@ class TrajetController extends Controller
         ], [
             'gare_depart_id.unique'     => 'Un trajet identique (même gare de départ et d\'arrivée) existe déjà pour cette agence.',
             'gare_arrivee_id.different' => 'La gare d\'arrivée doit être différente de la gare de départ.',
-            'ville_arrivee.different'   => 'La ville d\'arrivée doit être différente de la ville de départ.',
         ]);
+
+        [$villeDepart, $villeArrivee] = $this->villesDesGares($request);
 
         try {
             $trajet = Trajet::create([
                 'agence_id'       => $agenceId,
-                'ville_depart'    => trim($request->ville_depart),
+                'ville_depart'    => $villeDepart,
                 'gare_depart_id'  => $request->gare_depart_id,
-                'ville_arrivee'   => trim($request->ville_arrivee),
+                'ville_arrivee'   => $villeArrivee,
                 'gare_arrivee_id' => $request->gare_arrivee_id,
                 'bus_id'          => $request->bus_id,
             ]);
@@ -134,6 +135,7 @@ class TrajetController extends Controller
         $agenceId = Auth::user()->agence_id;
 
         $gares = Gare::where('agence_id', $agenceId)
+            ->orderBy('ville')
             ->orderBy('nom_gare')
             ->get();
 
@@ -154,7 +156,6 @@ class TrajetController extends Controller
         $agenceId = Auth::user()->agence_id;
 
         $request->validate([
-            'ville_depart'    => 'required|string|max:100',
             'gare_depart_id'  => [
                 'required', 'exists:gares,id',
                 // 🔑 Unicité combinée, en ignorant le trajet en cours
@@ -169,7 +170,6 @@ class TrajetController extends Controller
                     }
                 },
             ],
-            'ville_arrivee'   => 'required|string|max:100|different:ville_depart',
             'gare_arrivee_id' => [
                 'required', 'exists:gares,id', 'different:gare_depart_id',
                 function ($attr, $value, $fail) use ($agenceId) {
@@ -193,14 +193,15 @@ class TrajetController extends Controller
         ], [
             'gare_depart_id.unique'     => 'Un trajet identique (même gare de départ et d\'arrivée) existe déjà pour cette agence.',
             'gare_arrivee_id.different' => 'La gare d\'arrivée doit être différente de la gare de départ.',
-            'ville_arrivee.different'   => 'La ville d\'arrivée doit être différente de la ville de départ.',
         ]);
+
+        [$villeDepart, $villeArrivee] = $this->villesDesGares($request);
 
         try {
             $trajet->update([
-                'ville_depart'    => trim($request->ville_depart),
+                'ville_depart'    => $villeDepart,
                 'gare_depart_id'  => $request->gare_depart_id,
-                'ville_arrivee'   => trim($request->ville_arrivee),
+                'ville_arrivee'   => $villeArrivee,
                 'gare_arrivee_id' => $request->gare_arrivee_id,
                 'bus_id'          => $request->bus_id,
             ]);
@@ -287,6 +288,24 @@ class TrajetController extends Controller
     // ══════════════════════════════════════════════════════════════
     // MÉTHODES PRIVÉES
     // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Les villes d'un trajet sont celles de ses gares (référentiel Super Admin) :
+     * l'admin ne les saisit plus. Retourne [ville_depart, ville_arrivee].
+     */
+    private function villesDesGares(Request $request): array
+    {
+        $villeDepart  = Gare::whereKey($request->gare_depart_id)->value('ville');
+        $villeArrivee = Gare::whereKey($request->gare_arrivee_id)->value('ville');
+
+        if (mb_strtolower(trim($villeDepart)) === mb_strtolower(trim($villeArrivee))) {
+            throw ValidationException::withMessages([
+                'gare_arrivee_id' => "Les deux gares sont à {$villeDepart} : la ville d'arrivée doit être différente de la ville de départ.",
+            ]);
+        }
+
+        return [$villeDepart, $villeArrivee];
+    }
 
     private function synchroniserVagues(Trajet $trajet, array $horaires, int $agenceId): void
     {

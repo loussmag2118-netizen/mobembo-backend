@@ -115,7 +115,16 @@ class AgentPresenceController extends Controller
 
         $ticket = Ticket::where('reference_ticket', $reference)
             ->where('agence_id', $agent->agence_id)   // 🔒 étanchéité
-            ->with(['planificationVoyage.trajet'])
+            ->with([
+                'agence',
+                'planificationVoyage.trajet.gareDepart',
+                'planificationVoyage.trajet.gareArrivee',
+                'planificationVoyage.bus',
+                'planificationVoyage.vagueDepart',
+                'gareArrivee',
+                'agentVendeur',
+                'agentControleur',
+            ])
             ->first();
 
         if (!$ticket) {
@@ -124,15 +133,53 @@ class AgentPresenceController extends Controller
             ], 404);
         }
 
+        $voyage      = $ticket->planificationVoyage;
+        $trajet      = $voyage->trajet ?? null;
+        $gareDepart  = $trajet->gareDepart ?? null;
+        $gareArrivee = $ticket->gareArrivee ?? ($trajet->gareArrivee ?? null);
+        $vendeur     = $ticket->agentVendeur;
+        $controleur  = $ticket->agentControleur;
+
         return response()->json([
             'success' => true,
             'ticket'  => [
                 'id'                  => $ticket->id,
                 'reference'           => $ticket->reference_ticket,
+
+                // Passager
                 'nom'                 => $ticket->nom_passager,
                 'prenom'              => $ticket->prenom_passager,
-                'ville_arrivee'       => $ticket->ville_arrivee,
+                'telephone'           => $ticket->telephone_passager,
+
+                // Voyage
+                'agence'              => $ticket->agence->nom_agence ?? null,
+                'ville_depart'        => $trajet->ville_depart ?? null,
+                'gare_depart'         => $gareDepart->nom_gare ?? null,
+                'ville_arrivee'       => $ticket->ville_arrivee ?? ($trajet->ville_arrivee ?? null),
+                'gare_arrivee'        => $gareArrivee->nom_gare ?? null,
                 'quartier'            => $ticket->quartier,
+                'nom_trajet'          => $trajet
+                    ? (($gareDepart->nom_gare ?? '?') . ' → ' . ($gareArrivee->nom_gare ?? '?'))
+                    : null,
+                'date_voyage'         => $voyage?->date_voyage?->format('Y-m-d'),
+                'heure_depart'        => $voyage->vagueDepart->heure_depart ?? null,
+                'numero_bus'          => $ticket->numero_bus ?? ($voyage->bus->immatriculation ?? null),
+
+                // Paiement
+                'nombre_places'       => $ticket->nombre_places_reservees,
+                'montant_total'       => $ticket->montant_total,
+                'statut_paiement'     => $ticket->statut_paiement,
+                'mode_paiement'       => $ticket->mode_paiement,
+                'date_paiement'       => $ticket->date_paiement?->format('Y-m-d H:i'),
+                'date_reservation'    => $ticket->date_reservation?->format('Y-m-d H:i'),
+
+                // Agents & embarquement
+                'agent_vendeur'       => $vendeur
+                    ? trim(($vendeur->prenom ?? '') . ' ' . ($vendeur->nom ?? ''))
+                    : 'App Mobile (En ligne)',
+                'agent_controleur'    => $controleur
+                    ? trim(($controleur->prenom ?? '') . ' ' . ($controleur->nom ?? ''))
+                    : null,
                 'statut_embarquement' => $ticket->statut_embarquement,
             ],
         ], 200);

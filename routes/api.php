@@ -93,8 +93,14 @@ Route::get('/check-phone', function (\Illuminate\Http\Request $request) {
 });
 
 // ============================================================
+// CONTRÔLEURS API — AGENCES MOBILES
+// ============================================================
+use App\Http\Controllers\Api\AgenceApiController;
+
+// ============================================================
 // ROUTES PUBLIQUES — Consultation Mobile (JSON)
 // ============================================================
+Route::get('/agences',        [AgenceApiController::class, 'index']);
 Route::get('/gares',          [GareController::class, 'apiIndex']);
 Route::get('/trajets',        [TrajetController::class, 'apiIndex']);
 Route::get('/planifications', [PlanificationVoyageController::class, 'apiIndex']);
@@ -127,9 +133,11 @@ Route::middleware('auth:canadian-api')->prefix('canadian')->group(function () {
     // ────────────────────────────────────────────────────────
     // Réservations
     // ────────────────────────────────────────────────────────
-    Route::get('/mes-reservations', [CanadianClientController::class, 'mesReservations']);
-    Route::post('/reservations',    [CanadianClientController::class, 'creerReservation']);
-    Route::get('/reservations/{id}', [CanadianClientController::class, 'showReservation']);
+    Route::get('/mes-reservations',            [CanadianClientController::class, 'mesReservations']);
+    Route::post('/reservations',               [CanadianClientController::class, 'creerReservation']);
+    Route::get('/reservations/{id}',           [CanadianClientController::class, 'showReservation']);
+    Route::post('/reservations/{id}/annuler',   [CanadianClientController::class, 'annulerReservation']);
+    Route::get('/reservations/{id}/billet',     [CanadianClientController::class, 'billetPdf']);
 
     // ────────────────────────────────────────────────────────
     // Extras disponibles

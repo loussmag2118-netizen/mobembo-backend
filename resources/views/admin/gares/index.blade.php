@@ -1,127 +1,146 @@
 @extends('layouts.admin')
 
 @section('content')
+<div class="space-y-7" x-data="{ searchQuery: '' }">
 
-{{-- ============================================================ --}}
-{{-- EN-TÊTE                                                      --}}
-{{-- ============================================================ --}}
-<div class="sm:flex sm:items-center sm:justify-between mb-8">
-    <div>
-        <h1 class="text-2xl font-bold text-slate-900">
-            Gestion des gares
-        </h1>
-        <p class="text-slate-500 text-sm mt-1">
-            {{ $gares->count() }} gare(s) enregistrée(s) pour votre agence
-        </p>
-    </div>
-
-    <div class="flex gap-3 mt-4 sm:mt-0">
-        <a href="{{ route('admin.gares.trashed') }}"
-           class="inline-flex items-center rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 text-sm font-medium">
-            <i class="fa-solid fa-trash-can mr-1"></i> Corbeille
-        </a>
-
-        <a href="{{ route('admin.gares.create') }}"
-           class="inline-flex items-center rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-sm font-semibold transition">
-            + Ajouter une gare
-        </a>
-    </div>
-</div>
-
-{{-- ============================================================ --}}
-{{-- MESSAGES FLASH                                              --}}
-{{-- ============================================================ --}}
-@if(session('success'))
-    <div class="mb-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 rounded-r-lg text-sm">
-        <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-    </div>
-@endif
-
-@if(session('error'))
-    <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-lg text-sm">
-        <i class="fa-solid fa-circle-exclamation mr-2"></i>{{ session('error') }}
-    </div>
-@endif
-
-{{-- ============================================================ --}}
-{{-- TABLEAU                                                      --}}
-{{-- ============================================================ --}}
-<div class="bg-white shadow ring-1 ring-slate-200 rounded-xl overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50 border-b border-slate-200">
-                <tr>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Nom de la gare</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Ville</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500 text-right">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y divide-slate-200">
-            @forelse($gares as $g)
-                <tr class="hover:bg-slate-50 transition">
-
-                    {{-- NOM DE LA GARE --}}
-                    <td class="p-4">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-location-dot text-indigo-500"></i>
-                            <span class="font-semibold text-slate-900">
-                                {{ $g->nom_gare }}
-                            </span>
-                        </div>
-                    </td>
-
-                    {{-- VILLE --}}
-                    <td class="p-4">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                            <i class="fa-solid fa-city mr-1"></i>
-                            {{ $g->ville }}
-                        </span>
-                    </td>
-
-                    {{-- ACTIONS --}}
-                    <td class="p-4 text-right">
-                        <div class="flex justify-end gap-4">
-                            <a href="{{ route('admin.gares.edit', $g->id) }}"
-                               class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                                <i class="fa-solid fa-pen-to-square mr-1"></i> Modifier
-                            </a>
-
-                            <form action="{{ route('admin.gares.destroy', $g->id) }}"
-                                  method="POST"
-                                  onsubmit="return confirm('Voulez-vous envoyer cette gare dans la corbeille ?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        class="text-red-600 hover:text-red-900 text-sm font-medium">
-                                    <i class="fa-solid fa-trash-can mr-1"></i> Supprimer
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="3" class="p-12 text-center text-slate-400">
-                        <i class="fa-solid fa-location-dot text-4xl mb-3 text-slate-300"></i>
-                        <p class="text-base">Aucune gare enregistrée pour le moment.</p>
-                        <a href="{{ route('admin.gares.create') }}"
-                           class="inline-block mt-4 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-semibold">
-                            + Créer votre première gare
-                        </a>
-                    </td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    {{-- PAGINATION --}}
-    @if(method_exists($gares, 'links'))
-        <div class="p-4 border-t border-slate-200">
-            {{ $gares->links() }}
+    {{-- EN-TÊTE AVEC TITRE ET ACTIONS --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <span class="w-13 h-13 p-3 rounded-2xl bg-amber-100 text-amber-600 border border-amber-200 flex items-center justify-center text-2xl shadow-sm">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </span>
+                <span>Gares Routières & Stations</span>
+            </h1>
+            <p class="text-slate-500 text-base mt-2 ml-[64px]">
+                Points de départ, d'arrivée et escales desservis par votre agence.
+            </p>
         </div>
-    @endif
-</div>
 
+        <div class="flex items-center gap-3">
+            <a href="{{ route('admin.gares.trashed') }}"
+               class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-4 py-3 rounded-2xl text-sm font-bold transition-all shadow-sm border border-slate-200/80">
+                <i class="fa-solid fa-trash-can text-slate-400"></i>
+                <span>Corbeille</span>
+            </a>
+
+            <a href="{{ route('admin.gares.create') }}"
+               class="inline-flex items-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+                <i class="fa-solid fa-plus text-amber-400 text-base"></i>
+                <span>Ajouter une gare</span>
+            </a>
+        </div>
+    </div>
+
+    {{-- CONTENEUR TABLEAU AVEC RECHERCHE INSTANTANÉE --}}
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        
+        <div class="p-6 sm:px-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="relative w-full sm:w-96">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+                <input type="text" 
+                       x-model="searchQuery" 
+                       placeholder="Rechercher nom de gare, ville..." 
+                       class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+            </div>
+
+            <span class="text-sm font-bold text-slate-500 bg-slate-100 px-4 py-2.5 rounded-2xl">
+                <i class="fa-solid fa-location-dot text-amber-500 mr-1.5"></i>
+                {{ $gares->count() }} gare(s) enregistrée(s)
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/70 border-b border-slate-100 text-xs font-black uppercase tracking-wider text-slate-500">
+                        <th class="py-4 px-8">Nom de la Gare / Terminal</th>
+                        <th class="py-4 px-8">Ville / Localité</th>
+                        <th class="py-4 px-8 text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-slate-100">
+                @forelse($gares as $g)
+                    <tr x-show="searchQuery === '' || '{{ strtolower($g->nom_gare) }}'.includes(searchQuery.toLowerCase()) || '{{ strtolower($g->ville) }}'.includes(searchQuery.toLowerCase())"
+                        class="hover:bg-amber-50/30 transition-colors group">
+                        
+                        {{-- NOM DE LA GARE --}}
+                        <td class="py-5 px-8">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0 border border-amber-100 group-hover:bg-amber-100 transition-colors">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                <div>
+                                    <span class="font-extrabold text-slate-900 text-base">
+                                        {{ $g->nom_gare }}
+                                    </span>
+                                    <div class="text-xs text-slate-400 mt-0.5 font-semibold">Gare ID #{{ $g->id }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        {{-- VILLE --}}
+                        <td class="py-5 px-8">
+                            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
+                                <i class="fa-solid fa-city text-xs"></i>
+                                {{ $g->ville }}
+                            </span>
+                        </td>
+
+                        {{-- ACTIONS --}}
+                        <td class="py-5 px-8 text-right">
+                            <div class="flex justify-end items-center gap-2">
+                                <a href="{{ route('admin.gares.edit', $g->id) }}"
+                                   class="inline-flex items-center gap-2 text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors border border-indigo-100">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span>Modifier</span>
+                                </a>
+
+                                <form action="{{ route('admin.gares.destroy', $g->id) }}"
+                                      method="POST"
+                                      onsubmit="return confirm('Voulez-vous envoyer cette gare dans la corbeille ?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors border border-red-100">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                        <span>Supprimer</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="3" class="py-20 text-center text-slate-400">
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
+                                    <i class="fa-solid fa-location-dot text-4xl text-slate-300"></i>
+                                </div>
+                                <div>
+                                    <p class="text-base font-bold text-slate-600">Aucune gare enregistrée pour le moment.</p>
+                                    <p class="text-sm text-slate-400 mt-1">Commencez par ajouter votre première gare routière.</p>
+                                </div>
+                                <a href="{{ route('admin.gares.create') }}"
+                                   class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-md">
+                                    <i class="fa-solid fa-plus text-amber-400"></i>
+                                    Créer votre première gare
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if(method_exists($gares, 'links'))
+            <div class="p-5 border-t border-slate-100">
+                {{ $gares->links() }}
+            </div>
+        @endif
+    </div>
+
+</div>
 @endsection

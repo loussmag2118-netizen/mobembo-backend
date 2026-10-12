@@ -75,7 +75,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = Utilisateur::with('agence')
+        $user = Utilisateur::with(['agence', 'gare'])  // gare (et sa ville) : utile aux agents
             ->where('telephone', $request->telephone)
             ->first();
 
@@ -142,7 +142,7 @@ class AuthController extends Controller
     public function profile(Request $request)
     {
         return response()->json([
-            'user' => $request->user()->load('agence'),
+            'user' => $request->user()->load(['agence', 'gare']),
         ], 200);
     }
 

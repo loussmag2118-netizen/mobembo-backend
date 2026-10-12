@@ -27,7 +27,7 @@
     <div class="max-w-md w-full mx-4 bg-slate-900 border border-emerald-900/50 rounded-2xl p-8 shadow-2xl shadow-emerald-950/50">
         <div class="text-center mb-8">
             <div class="inline-block p-1.5 bg-slate-950 border border-emerald-800/60 rounded-2xl mb-3 shadow-lg">
-                <img src="{{ url('images/Logo.jpeg') }}" alt="Logo Mobembo Line" class="w-16 h-16 object-cover rounded-xl">
+                <img src="{{ asset('images/Logo.png') }}" alt="Logo Mobembo Line" class="w-16 h-16 object-contain rounded-xl">
             </div>
             <h1 class="text-2xl font-bold text-white">Mobembo <span class="text-emerald-400">SuperAdmin</span></h1>
             <p class="text-sm text-slate-400 mt-1">Portail de contrôle global des agences</p>

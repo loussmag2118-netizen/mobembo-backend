@@ -10,8 +10,9 @@ class Gare extends Model
 
     protected $fillable = [
         'agence_id',
+        'ville_id',
         'nom_gare',
-        'ville',
+        'ville',     // Nom de la ville, recopié depuis villes_terrestres (lu par tickets, API, etc.)
         'quartier',
     ];
 
@@ -21,6 +22,14 @@ class Gare extends Model
     public function agence()
     {
         return $this->belongsTo(Agence::class, 'agence_id');
+    }
+
+    /**
+     * La ville (référentiel Super Admin) où se trouve cette gare.
+     */
+    public function villeTerrestre()
+    {
+        return $this->belongsTo(VilleTerrestre::class, 'ville_id');
     }
 
     /**

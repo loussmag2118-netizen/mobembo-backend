@@ -2,43 +2,65 @@
 
 @section('content')
 
-{{-- ============================================================ --}}
-{{-- FLATPICKR (Calendrier multi-dates)                           --}}
-{{-- ============================================================ --}}
+{{-- FLATPICKR (Calendrier multi-dates) --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 
-<div class="max-w-3xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">
-            Planifier un nouveau voyage
-        </h1>
-        <a href="{{ route('admin.planifications.index') }}"
-           class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium">
-            ← Retour
-        </a>
+<div class="max-w-4xl mx-auto space-y-7">
+
+    {{-- EN-TÊTE --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <a href="{{ route('admin.planifications.index') }}" 
+                   class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-700 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm transition-all">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>Retour aux planifications</span>
+                </a>
+            </div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <span class="p-3 rounded-2xl bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center text-2xl shadow-sm">
+                    <i class="fa-solid fa-calendar-plus"></i>
+                </span>
+                <span>Planifier un Nouveau Voyage</span>
+            </h1>
+            <p class="text-slate-500 text-base mt-2 ml-[64px]">
+                Sélectionnez la ligne, le bus, l'horaire et programmez une ou plusieurs dates en un clic.
+            </p>
+        </div>
     </div>
 
     @if ($errors->any())
-        <div class="mb-5 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg text-sm text-red-700">
-            <i class="fa-solid fa-circle-exclamation mr-2"></i> Veuillez corriger les erreurs ci-dessous.
+        <div class="p-5 bg-rose-50 border border-rose-200 rounded-3xl text-sm text-rose-800 shadow-sm flex items-start gap-3">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 text-lg mt-0.5 shrink-0"></i>
+            <div>
+                <p class="font-extrabold text-sm mb-1">Veuillez corriger les erreurs de saisie :</p>
+                <ul class="list-disc ml-5 space-y-1 text-xs">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
     @endif
 
-    <div class="bg-white shadow ring-1 ring-slate-200 rounded-xl p-6">
-        <form action="{{ route('admin.planifications.store') }}" method="POST" class="space-y-5" id="planif_form">
+    {{-- CARTE FORMULAIRE PREMIUM --}}
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-9">
+        <form action="{{ route('admin.planifications.store') }}" method="POST" class="space-y-6" id="planif_form">
             @csrf
 
-            {{-- TRAJET --}}
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Trajet</label>
-                <div class="relative rounded-lg shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="fa-solid fa-route text-slate-400 text-sm"></i>
+            {{-- 1. TRAJET --}}
+            <div class="space-y-2">
+                <label class="block text-sm font-extrabold text-slate-900">
+                    Ligne & Trajet de voyage <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-solid fa-route text-base"></i>
                     </div>
                     <select name="trajet_id" id="trajet_id"
-                            class="block w-full rounded-lg py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset sm:text-sm {{ $errors->has('trajet_id') ? 'border-red-300 ring-red-500 focus:ring-red-600' : 'border-slate-300 ring-slate-300 focus:ring-indigo-600' }}"
+                            class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                             required>
                         <option value="">Sélectionner un trajet</option>
                         @forelse($trajets as $trajet)
@@ -61,27 +83,27 @@
                     </select>
                 </div>
                 @error('trajet_id')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
-            {{-- BUS (auto-sélectionné depuis le trajet) --}}
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">
-                    Bus assigné
+            {{-- 2. BUS AFFECTÉ --}}
+            <div class="space-y-2">
+                <label class="block text-sm font-extrabold text-slate-900">
+                    Bus assigné <span class="text-rose-500">*</span>
                 </label>
-                <div class="relative rounded-lg shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="fa-solid fa-bus text-slate-400 text-sm"></i>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-solid fa-bus text-base"></i>
                     </div>
                     <select name="bus_id" id="bus_id"
-                            class="block w-full rounded-lg py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset sm:text-sm {{ $errors->has('bus_id') ? 'border-red-300 ring-red-500 focus:ring-red-600' : 'border-slate-300 ring-slate-300 focus:ring-indigo-600' }}"
+                            class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                             required>
                         <option value="">Sélectionner un bus</option>
                         @forelse($buses as $bus)
                             @php
-                                $statut = $bus->statut ?? 'Disponible';
-                                $emoji = $statut === 'Disponible' ? '✅' : ($statut === 'Maintenance' ? '🔧' : '❌');
+                                $bStatut = $bus->statut ?? 'Disponible';
+                                $emoji = $bStatut === 'Disponible' ? '✅' : ($bStatut === 'Maintenance' ? '🔧' : '❌');
                             @endphp
                             <option value="{{ $bus->id }}"
                                     {{ old('bus_id') == $bus->id ? 'selected' : '' }}>
@@ -89,133 +111,138 @@
                                 {{ $bus->immatriculation ?? $bus->numero ?? 'Bus #'.$bus->id }}
                                 @if($bus->modele) • {{ $bus->modele }} @endif
                                 • {{ $bus->capacite_totale ?? $bus->places ?? $bus->nombre_places ?? '?' }} places
-                                — {{ $statut }}
+                                — {{ $bStatut }}
                             </option>
                         @empty
                             <option value="" disabled>⚠️ Aucun bus enregistré pour cette agence</option>
                         @endforelse
                     </select>
                 </div>
-                <p id="bus_help" class="mt-1 text-xs text-slate-500">
+                <p id="bus_help" class="text-xs font-bold text-slate-400 mt-1">
                     Le bus est automatiquement pré-sélectionné selon le trajet choisi.
                 </p>
                 @error('bus_id')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
-            {{-- VAGUE DE DÉPART (HORAIRE) --}}
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">
-                    Vague de départ (Horaire)
+            {{-- 3. VAGUE DE DÉPART (HORAIRE) --}}
+            <div class="space-y-2">
+                <label class="block text-sm font-extrabold text-slate-900">
+                    Vague de départ (Horaire) <span class="text-rose-500">*</span>
                 </label>
-                <div class="relative rounded-lg shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="fa-solid fa-clock text-slate-400 text-sm"></i>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-regular fa-clock text-base"></i>
                     </div>
                     <select name="vague_depart_id" id="vague_depart_id"
-                            class="block w-full rounded-lg py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset sm:text-sm {{ $errors->has('vague_depart_id') ? 'border-red-300 ring-red-500 focus:ring-red-600' : 'border-slate-300 ring-slate-300 focus:ring-indigo-600' }}"
+                            class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                             required>
                         <option value="">Sélectionnez d'abord un trajet</option>
                     </select>
                 </div>
-                <p id="vague_help" class="mt-1 text-xs text-slate-500">
+                <p id="vague_help" class="text-xs font-bold text-slate-400 mt-1">
                     Les horaires s'afficheront après la sélection du trajet.
                 </p>
                 @error('vague_depart_id')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
-            {{-- DATES DU VOYAGE --}}
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">
-                    Dates du voyage <span class="text-red-500">*</span>
-                </label>
-                <p class="text-xs text-slate-500 mb-2">
-                    Cliquez sur une ou plusieurs dates dans le calendrier. Chaque date créera une planification.
+            {{-- 4. DATES DU VOYAGE (FLATPICKR) --}}
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="block text-sm font-extrabold text-slate-900">
+                        Dates du voyage <span class="text-rose-500">*</span>
+                    </label>
+                    <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/50">
+                        Sélection multiple possible
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold">
+                    Cliquez sur les dates dans le calendrier. Chaque date créera automatiquement un départ planifié.
                 </p>
-                <div class="relative rounded-lg shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 z-10">
-                        <i class="fa-solid fa-calendar text-slate-400 text-sm"></i>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 z-10">
+                        <i class="fa-regular fa-calendar text-base"></i>
                     </div>
                     <input type="text" id="dates_picker" name="dates_voyage"
                            value="{{ old('dates_voyage') }}"
-                           placeholder="Cliquez pour ouvrir le calendrier"
-                           class="block w-full rounded-lg py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset sm:text-sm cursor-pointer {{ $errors->has('dates_voyage') ? 'border-red-300 ring-red-500' : 'border-slate-300 ring-slate-300 focus:ring-indigo-600' }}"
+                           placeholder="Cliquez pour choisir une ou plusieurs dates"
+                           class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer transition-all"
                            readonly
                            required>
                 </div>
-                <p id="dates_help" class="mt-1 text-xs text-slate-500">
+                <p id="dates_help" class="text-xs font-bold text-slate-400 mt-1">
                     Aucune date sélectionnée
                 </p>
                 @error('dates_voyage')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
                 @enderror
             </div>
 
-            {{-- NOMBRE DE TICKETS TOTAL PERSONNALISÉ (Optionnel) --}}
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">
-                    Nombre de tickets personnalisé (Optionnel)
-                </label>
-                <div class="relative rounded-lg shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="fa-solid fa-ticket text-slate-400 text-sm"></i>
+            {{-- 5. NOMBRE DE TICKETS ET PRIX (2 COLONNES) --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                <div class="space-y-2">
+                    <label class="block text-sm font-extrabold text-slate-900">
+                        Quota de billets (Optionnel)
+                    </label>
+                    <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-ticket text-base"></i>
+                        </div>
+                        <input type="number" name="nombre_tickets_total" id="nombre_tickets_total"
+                               value="{{ old('nombre_tickets_total') }}" min="1"
+                               placeholder="Capacité par défaut du bus"
+                               class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
                     </div>
-                    <input type="number" name="nombre_tickets_total" id="nombre_tickets_total"
-                           value="{{ old('nombre_tickets_total') }}" min="1"
-                           placeholder="Laisser vide pour utiliser la capacité totale par défaut du bus"
-                           class="block w-full rounded-lg py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset sm:text-sm border-slate-300 ring-slate-300 focus:ring-indigo-600">
+                    <p class="text-xs text-slate-400 font-semibold">
+                        Laissez vide pour adopter la capacité totale du véhicule.
+                    </p>
+                    @error('nombre_tickets_total')
+                        <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
-                <p class="mt-1 text-xs text-slate-500">
-                    Définit le quota maximal de places vendables pour ce voyage spécifique.
-                </p>
-                @error('nombre_tickets_total')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
 
-            {{-- PRIX DU VOYAGE (Optionnel) --}}
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">
-                    Prix du voyage (FCFA) (Optionnel)
-                </label>
-                <div class="relative rounded-lg shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="fa-solid fa-money-bill text-slate-400 text-sm"></i>
+                <div class="space-y-2">
+                    <label class="block text-sm font-extrabold text-slate-900">
+                        Prix du billet (FCFA) (Optionnel)
+                    </label>
+                    <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-money-bill-wave text-base"></i>
+                        </div>
+                        <input type="number" step="0.01" name="prix" id="prix"
+                               value="{{ old('prix') }}" min="0"
+                               placeholder="Ex: 15000"
+                               class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
                     </div>
-                    <input type="number" step="0.01" name="prix" id="prix"
-                           value="{{ old('prix') }}" min="0"
-                           placeholder="Ex: 15000"
-                           class="block w-full rounded-lg py-3 pl-10 pr-4 text-slate-900 ring-1 ring-inset sm:text-sm border-slate-300 ring-slate-300 focus:ring-indigo-600">
+                    <p class="text-xs text-slate-400 font-semibold">
+                        Tarif spécifique appliqué à ce voyage.
+                    </p>
+                    @error('prix')
+                        <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
-                <p class="mt-1 text-xs text-slate-500">
-                    Laissez vide si vous souhaitez appliquer la tarification standard ou par défaut.
-                </p>
-                @error('prix')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
             </div>
 
-            {{-- ACTIONS --}}
-            <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            {{-- BOUTONS D'ACTION --}}
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
                 <a href="{{ route('admin.planifications.index') }}"
-                   class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium">
+                   class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3.5 rounded-2xl text-sm font-bold transition-all">
                     Annuler
                 </a>
                 <button type="submit"
-                        class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-medium">
-                    Enregistrer les planifications
+                        class="bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white px-7 py-3.5 rounded-2xl text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2">
+                    <i class="fa-solid fa-check text-amber-400 text-base"></i>
+                    <span>Enregistrer les planifications</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- ============================================================ --}}
-{{-- SCRIPTS                                                      --}}
-{{-- ============================================================ --}}
+{{-- SCRIPTS --}}
 <script>
 (function () {
     'use strict';
@@ -243,10 +270,10 @@
                         if (!helpDates) return;
                         if (selectedDates.length === 0) {
                             helpDates.textContent = "Aucune date sélectionnée";
-                            helpDates.className = "mt-1 text-xs text-slate-500";
+                            helpDates.className = "text-xs font-bold text-slate-400 mt-1";
                         } else {
-                            helpDates.textContent = selectedDates.length + " date(s) sélectionnée(s)";
-                            helpDates.className = "mt-1 text-xs text-emerald-600 font-medium";
+                            helpDates.textContent = "✨ " + selectedDates.length + " date(s) programmée(s)";
+                            helpDates.className = "text-xs font-bold text-emerald-600 mt-1";
                         }
                     }
                 });
@@ -255,7 +282,8 @@
                 if (oldValue) {
                     picker.setDate(oldValue.split(','), false);
                     if (helpDates) {
-                        helpDates.textContent = oldValue.split(',').length + " date(s) sélectionnée(s)";
+                        helpDates.textContent = "✨ " + oldValue.split(',').length + " date(s) programmée(s)";
+                        helpDates.className = "text-xs font-bold text-emerald-600 mt-1";
                     }
                 }
             } catch (e) {
@@ -290,8 +318,8 @@
 
             if (!busId) {
                 if (helpBus) {
-                    helpBus.textContent = "⚠️ Ce trajet n'a pas de bus assigné. Choisissez-en un manuellement.";
-                    helpBus.className = "mt-1 text-xs text-amber-600 font-medium";
+                    helpBus.textContent = "⚠️ Ce trajet n'a pas de bus assigné par défaut. Sélectionnez-en un.";
+                    helpBus.className = "text-xs font-bold text-amber-600 mt-1";
                 }
                 return;
             }
@@ -306,8 +334,8 @@
             }
 
             if (trouve && helpBus) {
-                helpBus.textContent = "✅ Bus pré-sélectionné automatiquement selon le trajet.";
-                helpBus.className = "mt-1 text-xs text-emerald-600 font-medium";
+                helpBus.textContent = "✅ Bus sélectionné automatiquement selon la ligne choisie.";
+                helpBus.className = "text-xs font-bold text-emerald-600 mt-1";
             }
         }
 
@@ -320,7 +348,7 @@
                 selectVague.innerHTML = '<option value="">Sélectionnez d\'abord un trajet</option>';
                 if (helpVague) {
                     helpVague.textContent = "Les horaires s'afficheront après la sélection du trajet.";
-                    helpVague.className = 'mt-1 text-xs text-slate-500';
+                    helpVague.className = 'text-xs font-bold text-slate-400 mt-1';
                 }
                 return;
             }
@@ -331,21 +359,21 @@
                 selectVague.innerHTML = '<option value="">Aucun horaire pour ce trajet</option>';
                 if (helpVague) {
                     helpVague.textContent = "⚠️ Aucun horaire n'a été défini pour ce trajet.";
-                    helpVague.className = 'mt-1 text-xs text-amber-600 font-medium';
+                    helpVague.className = 'text-xs font-bold text-amber-600 mt-1';
                 }
                 return;
             }
 
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
-            defaultOpt.textContent = 'Sélectionner un horaire';
+            defaultOpt.textContent = 'Sélectionner un horaire de départ';
             selectVague.appendChild(defaultOpt);
 
             vagues.forEach(v => {
                 const opt = document.createElement('option');
                 opt.value = v.id;
                 const heure = v.heure_depart ? String(v.heure_depart).substring(0, 5) : '';
-                opt.textContent = (v.nom_vague || 'Départ') + (heure ? ' - ' + heure : '');
+                opt.textContent = (v.nom_vague || 'Départ') + (heure ? ' — ' + heure : '');
 
                 if (ancienVagueId && String(ancienVagueId) === String(v.id)) {
                     opt.selected = true;
@@ -354,8 +382,8 @@
             });
 
             if (helpVague) {
-                helpVague.textContent = vagues.length + ' horaire(s) disponible(s)';
-                helpVague.className = 'mt-1 text-xs text-emerald-600';
+                helpVague.textContent = "✅ " + vagues.length + " horaire(s) disponible(s)";
+                helpVague.className = 'text-xs font-bold text-emerald-600 mt-1';
             }
         }
 

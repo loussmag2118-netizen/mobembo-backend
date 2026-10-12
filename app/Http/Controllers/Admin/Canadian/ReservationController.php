@@ -15,7 +15,7 @@ class ReservationController extends Controller
             ->paginate(15);
 
         $total      = Reservation::count();
-        $confirmees = Reservation::where('statut', 'Confirmee')->count();
+        $confirmees = Reservation::whereIn('statut', ['Confirmee', 'Paye'])->count();
         $en_attente = Reservation::where('statut', 'En_Attente')->count();
         $annulees   = Reservation::where('statut', 'Annulee')->count();
 
@@ -74,7 +74,7 @@ class ReservationController extends Controller
     public function modifierStatut(Request $request, $id)
     {
         $validated = $request->validate([
-            'statut' => 'required|string|in:En_Attente,Confirmee,Annulee,Remboursee',
+            'statut' => 'required|string|in:En_Attente,Paye,Confirmee,Annulee,Remboursee',
         ]);
 
         $reservation = Reservation::findOrFail($id);

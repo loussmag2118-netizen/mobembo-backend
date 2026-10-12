@@ -31,7 +31,7 @@ class AgentController extends Controller
     public function create()
     {
         // Récupérer uniquement les gares de l'agence connectée
-        $gares = Gare::where('agence_id', Auth::user()->agence_id)->orderBy('nom_gare')->get();
+        $gares = Gare::where('agence_id', Auth::user()->agence_id)->orderBy('ville')->orderBy('nom_gare')->get();
 
         return view('admin.agents.create', compact('gares'));
     }
@@ -104,7 +104,7 @@ class AgentController extends Controller
         $this->authorizeAgence($agent);
 
         // Récupérer les gares de l'agence pour le sélecteur
-        $gares = Gare::where('agence_id', Auth::user()->agence_id)->orderBy('nom_gare')->get();
+        $gares = Gare::where('agence_id', Auth::user()->agence_id)->orderBy('ville')->orderBy('nom_gare')->get();
 
         return view('admin.agents.edit', compact('agent', 'gares'));
     }

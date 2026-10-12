@@ -1,60 +1,121 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="max-w-7xl mx-auto py-6 px-4">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">Historique Général des Ventes & Opérations par Gare</h1>
-        <a href="{{ route('admin.dashboard') }}" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium">
-            ← Retour au tableau de bord
-        </a>
+<div class="space-y-7">
+
+    {{-- EN-TÊTE AVEC TITRE ET RETOUR --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <a href="{{ route('admin.dashboard') }}" 
+                   class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-700 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm transition-all">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>Tableau de bord</span>
+                </a>
+            </div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <span class="p-3 rounded-2xl bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center text-2xl shadow-sm">
+                    <i class="fa-solid fa-cash-register"></i>
+                </span>
+                <span>Historique Global des Ventes & Gares</span>
+            </h1>
+            <p class="text-slate-500 text-base mt-2 ml-[64px]">
+                Consolidation des flux billetterie et des clients enregistrés par gare.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="location.reload()" 
+                    class="w-11 h-11 rounded-2xl bg-white border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center text-sm shadow-sm transition-all" 
+                    title="Actualiser">
+                <i class="fa-solid fa-rotate-right text-base"></i>
+            </button>
+        </div>
     </div>
 
     @if(isset($donneesGares) && count($donneesGares) > 0)
         @foreach($donneesGares as $item)
-            <div class="bg-white shadow ring-1 ring-slate-200 rounded-xl overflow-hidden mb-8">
-                <!-- En-tête de la Gare (Moukondo, Mpila, etc.) -->
-                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                    <h2 class="text-lg font-semibold text-indigo-700">
-                        📍 Gare : {{ $item['gare']->nom_gare ?? $item['gare']->nom }}
-                    </h2>
-                    <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-1 rounded-full">
-                        {{ $item['tickets']->count() }} Client(s)
-                    </span>
+            @php
+                $gareNom = $item['gare']->nom_gare ?? $item['gare']->nom ?? 'Gare';
+                $ticketsCount = $item['tickets']->count();
+                $montantTotal = $item['tickets']->sum('prix');
+            @endphp
+            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden mb-6">
+                
+                {{-- En-tête de la Gare --}}
+                <div class="p-6 sm:px-8 bg-gradient-to-r from-slate-50 via-white to-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shrink-0 border border-indigo-100 shadow-sm">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-slate-900">
+                                {{ $gareNom }}
+                            </h2>
+                            <p class="text-xs font-bold text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                <i class="fa-solid fa-city text-indigo-500"></i>
+                                <span>{{ $item['gare']->ville ?? 'Réseau National' }}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                            <i class="fa-solid fa-users text-xs"></i>
+                            <span>{{ $ticketsCount }} client(s)</span>
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
+                            <i class="fa-solid fa-wallet text-xs"></i>
+                            <span>{{ number_format($montantTotal, 0, ',', ' ') }} FCFA</span>
+                        </span>
+                    </div>
                 </div>
 
+                {{-- Table des opérations --}}
                 <div class="p-6">
-                    @if($item['tickets']->count() > 0)
+                    @if($ticketsCount > 0)
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-slate-200">
+                            <table class="w-full text-left border-collapse">
                                 <thead>
-                                    <tr class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                        <th class="px-4 py-3">N° Billet</th>
-                                        <th class="px-4 py-3">Client</th>
-                                        <th class="px-4 py-3">Trajet / Voyage</th>
-                                        <th class="px-4 py-3">Agent Vendeur</th>
-                                        <th class="px-4 py-3">Montant</th>
-                                        <th class="px-4 py-3">Date</th>
+                                    <tr class="bg-slate-50/70 border-b border-slate-100 text-xs font-black uppercase tracking-wider text-slate-500">
+                                        <th class="py-4 px-6">N° Billet</th>
+                                        <th class="py-4 px-6">Client / Passager</th>
+                                        <th class="py-4 px-6">Ligne / Voyage</th>
+                                        <th class="py-4 px-6">Agent Émetteur</th>
+                                        <th class="py-4 px-6">Montant</th>
+                                        <th class="py-4 px-6 text-right">Date & Heure</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-200 text-sm">
+                                <tbody class="divide-y divide-slate-100 text-sm">
                                     @foreach($item['tickets'] as $op)
-                                        <tr>
-                                            <td class="px-4 py-3 font-medium text-slate-900">#{{ $op->numero_billet ?? $op->id }}</td>
-                                            <td class="px-4 py-3">
-                                                <div class="font-medium text-slate-900">{{ $op->nom_client ?? 'Client direct' }}</div>
-                                                <div class="text-xs text-slate-500">{{ $op->telephone_client ?? '' }}</div>
+                                        <tr class="hover:bg-slate-50/60 transition-colors">
+                                            <td class="py-4 px-6 font-mono font-bold text-slate-900">
+                                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs">
+                                                    #{{ $op->numero_billet ?? $op->reference_ticket ?? $op->id }}
+                                                </span>
                                             </td>
-                                            <td class="px-4 py-3 text-slate-600">
-                                                {{ $op->voyage->trajet->nom ?? 'Voyage #' . ($op->planification_voyage_id ?? 'N/C') }}
+                                            <td class="py-4 px-6">
+                                                <div class="font-extrabold text-slate-900 text-sm">
+                                                    {{ $op->nom_client ?? $op->nom_passager ?? 'Client direct' }}
+                                                </div>
+                                                <div class="text-xs text-slate-400 font-semibold">
+                                                    {{ $op->telephone_client ?? $op->telephone_passager ?? '—' }}
+                                                </div>
                                             </td>
-                                            <td class="px-4 py-3 text-slate-600">
-                                                {{ $op->agentVendeur->nom ?? 'Système / Web' }}
+                                            <td class="py-4 px-6 text-slate-600 font-semibold text-xs">
+                                                {{ $op->voyage->trajet->nom ?? 'Départ #' . ($op->planification_voyage_id ?? 'N/C') }}
                                             </td>
-                                            <td class="px-4 py-3 font-semibold text-emerald-600">
-                                                {{ number_format($op->prix ?? 0, 0, ',', ' ') }} FCFA
+                                            <td class="py-4 px-6">
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
+                                                    <i class="fa-solid fa-user-tie text-slate-400 text-[10px]"></i>
+                                                    {{ $op->agentVendeur->nom ?? 'Système Web' }}
+                                                </span>
                                             </td>
-                                            <td class="px-4 py-3 text-slate-500">
-                                                {{ $op->created_at->format('d/m/Y H:i') }}
+                                            <td class="py-4 px-6 font-extrabold text-emerald-700 font-mono text-sm">
+                                                {{ number_format($op->prix ?? $op->montant_total ?? 0, 0, ',', ' ') }} FCFA
+                                            </td>
+                                            <td class="py-4 px-6 text-right text-slate-400 font-mono text-xs font-semibold">
+                                                {{ $op->created_at ? $op->created_at->format('d/m/Y H:i') : '—' }}
                                             </td>
                                         </tr>
                                     @endforeach
@@ -62,15 +123,23 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-slate-400 text-sm italic py-2">Aucun client n'a payé de billet dans cette gare pour le moment.</p>
+                        <div class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-300"></i>
+                            <p class="text-sm font-bold text-slate-600">Aucune vente enregistrée dans cette gare pour le moment.</p>
+                        </div>
                     @endif
                 </div>
             </div>
         @endforeach
     @else
-        <div class="bg-white shadow ring-1 ring-slate-200 rounded-xl overflow-hidden p-6 text-center">
-            <p class="text-slate-500 py-6">Aucune opération enregistrée pour le moment.</p>
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-16 text-center text-slate-400">
+            <div class="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-cash-register text-4xl text-slate-300"></i>
+            </div>
+            <p class="text-lg font-bold text-slate-700">Aucune opération consolidée disponible.</p>
+            <p class="text-sm text-slate-400 mt-1">Les ventes aux guichets apparaîtront ici.</p>
         </div>
     @endif
+
 </div>
 @endsection

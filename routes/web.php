@@ -17,12 +17,14 @@ use App\Http\Controllers\Admin\PlanificationVoyageController;
 use App\Http\Controllers\Admin\AgentHistoryController;
 use App\Http\Controllers\Admin\VagueDepartController;
 use App\Http\Controllers\Admin\AdminHistoriqueController;
+use App\Http\Controllers\Admin\VoyageurController;
 
 // ================================================================
 // CONTRÔLEURS SUPER ADMIN
 // ================================================================
 use App\Http\Controllers\SuperAdmin\AgenceController as SuperAdminAgenceController;
 use App\Http\Controllers\SuperAdmin\AuthController as SuperAdminAuthController;
+use App\Http\Controllers\SuperAdmin\VilleController as SuperAdminVilleController;
 
 // ================================================================
 // CONTRÔLEURS CANADIAN AIRWAYS
@@ -109,6 +111,12 @@ Route::middleware('auth:superadmin')
 
         Route::patch('/agences/{agence}/toggle-status', [SuperAdminAgenceController::class, 'toggleStatus'])
             ->name('agences.toggleStatus');
+
+        // Référentiel des villes du transport terrestre (utilisé par les gares des agences)
+        Route::patch('/villes/{ville}/toggle', [SuperAdminVilleController::class, 'toggle'])
+            ->name('villes.toggle');
+        Route::resource('villes', SuperAdminVilleController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
     });
 
 // ================================================================
@@ -157,6 +165,7 @@ Route::middleware(['auth', 'agence.active'])
         Route::resource('planifications', PlanificationVoyageController::class)
             ->parameters(['planifications' => 'planificationVoyage']);
 
+        Route::resource('voyageurs', VoyageurController::class);
         Route::resource('tickets', TicketAdminController::class);
         Route::resource('statistiques', StatistiqueController::class);
     });

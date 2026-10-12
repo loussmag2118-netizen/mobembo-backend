@@ -85,9 +85,10 @@ class UnifiedLoginController extends Controller
         // ============================================================
         // 3️⃣ ESSAI UTILISATEUR — ⚠️ mot de passe = "mot_de_passe"
         // ============================================================
-        $user = Utilisateur::where(function ($q) use ($identifiant, $telNormalise, $telAvecZero) {
+        $user = Utilisateur::where(function ($q) use ($identifiant, $telNormalise, $telAvecZero, $telAvecIndic) {
                 $q->where('telephone', $telNormalise)
                   ->orWhere('telephone', $telAvecZero)
+                  ->orWhere('telephone', $telAvecIndic)
                   ->orWhere('telephone', $identifiant)
                   ->orWhere('email', $identifiant);
             })

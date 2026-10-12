@@ -41,6 +41,7 @@ class AgentVoyageursController extends Controller
                 'planificationVoyage.bus',
                 'planificationVoyage.vagueDepart',
                 'gareArrivee',
+                'agentVendeur',
             ]);
 
         // Filtre optionnel : ?date=2025-06-15
@@ -83,6 +84,11 @@ class AgentVoyageursController extends Controller
                 $present = false;
             }
 
+            $nomGareEffectif = $gareDepart->nom_gare ?? ($gareArrivee->nom_gare ?? 'Gare Principale');
+            $nomAgentVendeur = $ticket->agentVendeur 
+                ? trim(($ticket->agentVendeur->prenom ?? '') . ' ' . ($ticket->agentVendeur->nom ?? ''))
+                : 'App Mobile (En ligne)';
+
             return [
                 'id'                => $ticket->id,
                 'reference'         => $ticket->reference_ticket,
@@ -93,11 +99,17 @@ class AgentVoyageursController extends Controller
                 'prenom'            => $ticket->prenom_passager,
                 'telephone'         => $ticket->telephone_passager,
 
-                // Destination (figée au paiement)
+                // Destination & Gares
                 'ville_arrivee'     => $ticket->ville_arrivee,
                 'quartier'          => $ticket->quartier,
                 'agence_arrivee'    => $gareArrivee->nom_gare ?? null,
                 'gare_depart'       => $gareDepart->nom_gare ?? null,
+                'nom_gare'          => $nomGareEffectif,
+                'gare'              => $nomGareEffectif,
+
+                // Vendeur
+                'agent_vendeur'     => $nomAgentVendeur,
+                'agent'             => $nomAgentVendeur,
 
                 // Trajet / Voyage
                 'nom_trajet'        => $trajet

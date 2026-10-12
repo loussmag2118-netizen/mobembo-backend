@@ -190,8 +190,9 @@ class MomoController extends Controller
             $nombrePassagers = count($request->input('passagers', []));
             $prixUnitaire    = (float) ($voyage->prix ?? 0);
 
+            $ticketsCrees = [];
             foreach ($request->input('passagers', []) as $passager) {
-                Ticket::create([
+                $ticket = Ticket::create([
                     'planification_voyage_id' => $voyage->id,
                     'agence_id'               => $voyage->agence_id,
                     'reference_ticket'        => 'TKT-' . $mode . '-' . strtoupper(Str::random(8)),
@@ -214,17 +215,38 @@ class MomoController extends Controller
                     'date_paiement'           => $simulation ? now() : null,
                     'date_reservation'        => now(),
                 ]);
+
+                $ticketsCrees[] = [
+                    'id'               => $ticket->id,
+                    'reference_ticket' => $ticket->reference_ticket,
+                    'reference'        => $ticket->reference_ticket,
+                    'qr_code_token'    => $ticket->qr_code_token,
+                    'nom'              => $ticket->nom_passager,
+                    'prenom'           => $ticket->prenom_passager,
+                    'telephone'        => $ticket->telephone_passager,
+                    'nom_trajet'       => $ticket->nom_trajet,
+                    'gareDepart'       => $gareDepart->nom_gare ?? '',
+                    'gareArrivee'      => $gareArrivee->nom_gare ?? '',
+                    'villeDepart'      => $gareDepart->ville ?? '',
+                    'villeArrivee'     => $gareArrivee->ville ?? '',
+                    'horaire'          => $ticket->horaire,
+                    'date'             => $voyage->date_voyage ? $voyage->date_voyage->format('d/m/Y') : null,
+                    'numeroBus'        => $ticket->numero_bus,
+                    'prix'             => (string) $prixUnitaire,
+                ];
             }
 
             $voyage->decrement('places_disponibles', $nombrePassagers);
 
             return response()->json([
+                'success'      => true,
                 'message'      => $simulation
                     ? 'Paiement simulé avec succès.'
                     : 'Demande MTN envoyée. Validez sur votre téléphone.',
                 'reference_id' => $referenceId,
                 'status'       => $simulation ? 'PAID' : 'PENDING',
                 'simulation'   => $simulation,
+                'tickets'      => $ticketsCrees,
             ], 200);
 
         } catch (\Exception $e) {

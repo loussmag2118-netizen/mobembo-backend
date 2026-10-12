@@ -20,6 +20,14 @@ class Agence extends Model
     }
 
     /**
+     * Récupère le compte Administrateur de cette agence.
+     */
+    public function admin()
+    {
+        return $this->hasOne(Utilisateur::class, 'agence_id')->where('role', 'Admin');
+    }
+
+    /**
      * Récupère uniquement les utilisateurs qui ont le rôle d'agent pour cette agence.
      */
     public function agents()

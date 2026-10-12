@@ -23,7 +23,7 @@
 
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center mb-4">
-                    <img src="{{ asset('images/Logo.jpeg') }}" alt="Logo Mobembo Line" class="w-20 h-20 object-cover rounded-2xl shadow-md border-2 border-emerald-500">
+                    <img src="{{ asset('images/Logo.png') }}" alt="Logo Mobembo Line" class="w-20 h-20 object-contain rounded-2xl shadow-md border-2 border-emerald-500">
                 </div>
                 <h1 class="font-black text-2xl tracking-wider uppercase text-slate-900">
                     Mobembo <span class="text-emerald-600">Line</span>

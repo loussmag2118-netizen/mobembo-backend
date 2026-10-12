@@ -1,116 +1,148 @@
 @if($errors->any())
-    <div class="mb-5 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-        <strong>Erreur :</strong>
-        <ul class="list-disc ml-5 mt-2 space-y-1">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
+    <div class="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-sm text-rose-800 shadow-sm flex items-start gap-3">
+        <i class="fa-solid fa-circle-exclamation text-rose-600 text-lg mt-0.5 shrink-0"></i>
+        <div>
+            <p class="font-extrabold text-sm mb-1">Veuillez corriger les erreurs suivantes :</p>
+            <ul class="list-disc ml-5 space-y-1 text-xs">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
     </div>
 @endif
 
-<div class="space-y-5">
+<div class="space-y-7">
 
-    {{-- ============================================ --}}
-    {{-- DÉPART                                       --}}
-    {{-- ============================================ --}}
-    <div class="border-l-4 border-emerald-500 pl-4">
-        <h3 class="font-semibold text-emerald-700 mb-3">🚏 Point de départ</h3>
+    {{-- 1. POINT DE DÉPART --}}
+    <div class="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-100 space-y-4">
+        <div class="flex items-center gap-2 text-emerald-800 font-extrabold text-sm">
+            <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-arrow-up-from-bracket"></i>
+            </span>
+            <span>Point de Départ</span>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     Ville de départ
                 </label>
-                <input type="text" name="ville_depart"
-                       value="{{ old('ville_depart', $trajet->ville_depart ?? '') }}"
-                       placeholder="Ex: Brazzaville"
-                       class="w-full p-2 border border-slate-300 rounded-lg @error('ville_depart') border-red-500 @enderror"
-                       required>
-                @error('ville_depart')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                @enderror
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-solid fa-city text-sm"></i>
+                    </div>
+                    @php $gareChoisie = $gares->firstWhere('id', (int) old('gare_depart_id', $trajet->gare_depart_id ?? 0)); @endphp
+                    <div id="ville_depart_affichee"
+                         class="w-full pl-11 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700">
+                        {{ $gareChoisie->ville ?? '— choisissez une gare —' }}
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500">Déduite automatiquement de la gare.</p>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">
-                    Gare de départ
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Gare de départ <span class="text-rose-500">*</span>
                 </label>
-                <select name="gare_depart_id" id="gare_depart_id"
-                        class="w-full p-2 border border-slate-300 rounded-lg bg-white @error('gare_depart_id') border-red-500 @enderror"
-                        required>
-                    <option value="">-- Choisir une gare --</option>
-                    @foreach($gares as $gare)
-                        <option value="{{ $gare->id }}"
-                                data-ville="{{ $gare->ville }}"
-                                {{ old('gare_depart_id', $trajet->gare_depart_id ?? '') == $gare->id ? 'selected' : '' }}>
-                            {{ $gare->nom_gare }} @if($gare->ville) — {{ $gare->ville }} @endif
-                        </option>
-                    @endforeach
-                </select>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-solid fa-map-pin text-sm"></i>
+                    </div>
+                    <select name="gare_depart_id" id="gare_depart_id"
+                            class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all @error('gare_depart_id') border-rose-300 ring-rose-500 @enderror"
+                            required>
+                        <option value="">-- Choisir une gare --</option>
+                        @foreach($gares->groupBy('ville') as $nomVille => $garesVille)
+                            <optgroup label="{{ $nomVille }}">
+                                @foreach($garesVille as $gare)
+                                    <option value="{{ $gare->id }}"
+                                            data-ville="{{ $gare->ville }}"
+                                            {{ old('gare_depart_id', $trajet->gare_depart_id ?? '') == $gare->id ? 'selected' : '' }}>
+                                        {{ $gare->nom_gare }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </select>
+                </div>
                 @error('gare_depart_id')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    <p class="text-rose-600 text-xs font-bold mt-1">{{ $message }}</p>
                 @enderror
             </div>
         </div>
     </div>
 
-    {{-- ============================================ --}}
-    {{-- ARRIVÉE                                      --}}
-    {{-- ============================================ --}}
-    <div class="border-l-4 border-blue-500 pl-4">
-        <h3 class="font-semibold text-blue-700 mb-3">🏁 Point d'arrivée</h3>
+    {{-- 2. POINT D'ARRIVÉE --}}
+    <div class="p-5 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-4">
+        <div class="flex items-center gap-2 text-blue-800 font-extrabold text-sm">
+            <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-location-dot"></i>
+            </span>
+            <span>Point d'Arrivée & Destination</span>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     Ville d'arrivée
                 </label>
-                <input type="text" name="ville_arrivee"
-                       value="{{ old('ville_arrivee', $trajet->ville_arrivee ?? '') }}"
-                       placeholder="Ex: Pointe-Noire"
-                       class="w-full p-2 border border-slate-300 rounded-lg @error('ville_arrivee') border-red-500 @enderror"
-                       required>
-                @error('ville_arrivee')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                @enderror
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-solid fa-city text-sm"></i>
+                    </div>
+                    @php $gareChoisie = $gares->firstWhere('id', (int) old('gare_arrivee_id', $trajet->gare_arrivee_id ?? 0)); @endphp
+                    <div id="ville_arrivee_affichee"
+                         class="w-full pl-11 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700">
+                        {{ $gareChoisie->ville ?? '— choisissez une gare —' }}
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500">Déduite automatiquement de la gare.</p>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">
-                    Gare d'arrivée
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Gare d'arrivée <span class="text-rose-500">*</span>
                 </label>
-                <select name="gare_arrivee_id" id="gare_arrivee_id"
-                        class="w-full p-2 border border-slate-300 rounded-lg bg-white @error('gare_arrivee_id') border-red-500 @enderror"
-                        required>
-                    <option value="">-- Choisir une gare --</option>
-                    @foreach($gares as $gare)
-                        <option value="{{ $gare->id }}"
-                                data-ville="{{ $gare->ville }}"
-                                {{ old('gare_arrivee_id', $trajet->gare_arrivee_id ?? '') == $gare->id ? 'selected' : '' }}>
-                            {{ $gare->nom_gare }} @if($gare->ville) — {{ $gare->ville }} @endif
-                        </option>
-                    @endforeach
-                </select>
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                        <i class="fa-solid fa-map-pin text-sm"></i>
+                    </div>
+                    <select name="gare_arrivee_id" id="gare_arrivee_id"
+                            class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all @error('gare_arrivee_id') border-rose-300 ring-rose-500 @enderror"
+                            required>
+                        <option value="">-- Choisir une gare --</option>
+                        @foreach($gares->groupBy('ville') as $nomVille => $garesVille)
+                            <optgroup label="{{ $nomVille }}">
+                                @foreach($garesVille as $gare)
+                                    <option value="{{ $gare->id }}"
+                                            data-ville="{{ $gare->ville }}"
+                                            {{ old('gare_arrivee_id', $trajet->gare_arrivee_id ?? '') == $gare->id ? 'selected' : '' }}>
+                                        {{ $gare->nom_gare }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </select>
+                </div>
                 @error('gare_arrivee_id')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    <p class="text-rose-600 text-xs font-bold mt-1">{{ $message }}</p>
                 @enderror
             </div>
         </div>
     </div>
 
-    {{-- ============================================ --}}
-    {{-- BUS (LISTE DÉROULANTE)                       --}}
-    {{-- ============================================ --}}
-    <div class="border-l-4 border-amber-500 pl-4">
-        <h3 class="font-semibold text-amber-700 mb-3">🚌 Bus assigné</h3>
-
-        <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">
-                Sélectionner le bus
-            </label>
+    {{-- 3. BUS ASSIGNÉ PAR DÉFAUT --}}
+    <div class="space-y-2">
+        <label class="block text-sm font-extrabold text-slate-900">
+            Bus assigné par défaut <span class="text-rose-500">*</span>
+        </label>
+        <div class="relative">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                <i class="fa-solid fa-bus text-base"></i>
+            </div>
             <select name="bus_id" id="bus_id"
-                    class="w-full p-2 border border-slate-300 rounded-lg bg-white @error('bus_id') border-red-500 @enderror"
+                    class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all @error('bus_id') border-rose-300 ring-rose-500 @enderror"
                     required>
                 <option value="">-- Choisir un bus --</option>
                 @forelse($buses as $bus)
@@ -130,26 +162,32 @@
                     <option value="" disabled>⚠️ Aucun bus enregistré pour cette agence</option>
                 @endforelse
             </select>
-            <p class="text-xs text-slate-500 mt-1">
-                Les bus proviennent de la section
-                <a href="{{ route('admin.bus.index') }}" class="text-amber-600 hover:underline font-medium">
-                    Gestion des Bus
-                </a>.
-            </p>
-            @error('bus_id')
-                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-            @enderror
         </div>
+        <p class="text-xs text-slate-400 font-semibold mt-1">
+            Les véhicules enregistrés dans votre flotte.
+        </p>
+        @error('bus_id')
+            <p class="text-rose-600 text-xs font-bold mt-1">{{ $message }}</p>
+        @enderror
     </div>
 
-    {{-- ============================================ --}}
-    {{-- HORAIRES DE DÉPART                           --}}
-    {{-- ============================================ --}}
-    <div class="border-l-4 border-purple-500 pl-4">
-        <h3 class="font-semibold text-purple-700 mb-3">🕐 Horaires de départ</h3>
-        <p class="text-xs text-slate-500 mb-3">
-            Ajoutez un ou plusieurs horaires pour ce trajet.
-        </p>
+    {{-- 4. HORAIRES DE DÉPART (VAGUES) --}}
+    <div class="space-y-3">
+        <div class="flex items-center justify-between">
+            <div>
+                <label class="block text-sm font-extrabold text-slate-900">
+                    Horaires réguliers de départ
+                </label>
+                <p class="text-xs text-slate-400 font-semibold">
+                    Définissez les créneaux horaires habituels pour ce trajet.
+                </p>
+            </div>
+            <button type="button" onclick="ajouterHoraire()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold border border-purple-200/60 transition-all">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Ajouter un horaire</span>
+            </button>
+        </div>
 
         <div id="horaires-container" class="space-y-2">
             @php
@@ -164,19 +202,22 @@
             @endphp
 
             @foreach($oldHoraires as $h)
-                <div class="flex gap-2 horaire-row">
-                    <input type="time" name="horaires[]" value="{{ $h }}"
-                           class="flex-1 p-2 border border-slate-300 rounded-lg" required>
-                    <button type="button" onclick="this.parentElement.remove()"
-                            class="px-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">✕</button>
+                <div class="flex items-center gap-2 horaire-row">
+                    <div class="relative flex-1">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-regular fa-clock text-sm"></i>
+                        </div>
+                        <input type="time" name="horaires[]" value="{{ $h }}"
+                               class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all font-mono" required>
+                    </div>
+                    <button type="button" onclick="this.closest('.horaire-row').remove()"
+                            class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-200/50"
+                            title="Supprimer cet horaire">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
                 </div>
             @endforeach
         </div>
-
-        <button type="button" onclick="ajouterHoraire()"
-                class="mt-3 text-sm text-purple-600 hover:text-purple-800 font-medium">
-            + Ajouter un horaire
-        </button>
     </div>
 
 </div>
@@ -185,38 +226,36 @@
     function ajouterHoraire() {
         const container = document.getElementById('horaires-container');
         const div = document.createElement('div');
-        div.className = 'flex gap-2 horaire-row';
+        div.className = 'flex items-center gap-2 horaire-row';
         div.innerHTML = `
-            <input type="time" name="horaires[]" value="08:00"
-                   class="flex-1 p-2 border border-slate-300 rounded-lg" required>
-            <button type="button" onclick="this.parentElement.remove()"
-                    class="px-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">✕</button>
+            <div class="relative flex-1">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <i class="fa-regular fa-clock text-sm"></i>
+                </div>
+                <input type="time" name="horaires[]" value="08:00"
+                       class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all font-mono" required>
+            </div>
+            <button type="button" onclick="this.closest('.horaire-row').remove()"
+                    class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-200/50"
+                    title="Supprimer cet horaire">
+                <i class="fa-solid fa-trash text-xs"></i>
+            </button>
         `;
         container.appendChild(div);
     }
 
-    // Auto-remplissage des villes à partir de la gare sélectionnée
+    // Affiche la ville de la gare sélectionnée (les villes ne sont plus saisies)
     document.addEventListener('DOMContentLoaded', function () {
-        const selectDep = document.getElementById('gare_depart_id');
-        const inputVilleDep = document.querySelector('input[name="ville_depart"]');
+        [['gare_depart_id', 'ville_depart_affichee'], ['gare_arrivee_id', 'ville_arrivee_affichee']]
+            .forEach(function ([selectId, affichageId]) {
+                const select = document.getElementById(selectId);
+                const affichage = document.getElementById(affichageId);
+                if (!select || !affichage) return;
 
-        const selectArr = document.getElementById('gare_arrivee_id');
-        const inputVilleArr = document.querySelector('input[name="ville_arrivee"]');
-
-        if (selectDep && inputVilleDep) {
-            selectDep.addEventListener('change', function () {
-                const opt = this.options[this.selectedIndex];
-                const ville = opt.getAttribute('data-ville');
-                if (ville) inputVilleDep.value = ville;
+                select.addEventListener('change', function () {
+                    const opt = this.options[this.selectedIndex];
+                    affichage.textContent = opt.getAttribute('data-ville') || '— choisissez une gare —';
+                });
             });
-        }
-
-        if (selectArr && inputVilleArr) {
-            selectArr.addEventListener('change', function () {
-                const opt = this.options[this.selectedIndex];
-                const ville = opt.getAttribute('data-ville');
-                if (ville) inputVilleArr.value = ville;
-            });
-        }
     });
 </script>

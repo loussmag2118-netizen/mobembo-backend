@@ -1,214 +1,247 @@
 @extends('layouts.admin')
 
 @section('content')
+<div class="space-y-7" x-data="{ searchQuery: '', filterStatut: 'all' }">
 
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">
-        Gestion des Planifications de Voyages
-    </h1>
-
-    <div class="flex gap-3">
-        <a href="{{ route('admin.planifications.create') }}"
-           class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
-            + Planifier un voyage
-        </a>
-    </div>
-</div>
-
-@if(session('success'))
-    <div class="mb-5 p-4 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm">
-        <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-    </div>
-@endif
-
-@if(session('error'))
-    <div class="mb-5 p-4 rounded-lg bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
-        <i class="fa-solid fa-circle-exclamation mr-2"></i>{{ session('error') }}
-    </div>
-@endif
-
-<div class="bg-white shadow ring-1 ring-slate-200 rounded-xl overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50 border-b border-slate-200">
-                <tr>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Trajet</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Bus</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Horaire</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Date</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Tickets / Places</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Statut</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-            @forelse($planifications as $p)
-                <tr class="hover:bg-slate-50 transition">
-
-                    {{-- TRAJET --}}
-                    <td class="p-4 text-sm font-medium text-slate-800">
-                        <div class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-route text-slate-400 text-xs"></i>
-                            <span>
-                                {{ $p->trajet->gareDepart->nom_gare ?? '?' }}
-                                <span class="text-xs text-slate-500 font-normal">
-                                    ({{ $p->trajet->gareDepart->ville ?? '?' }})
-                                </span>
-                            </span>
-                        </div>
-                        <div class="text-slate-400 text-xs ml-5">↓</div>
-                        <div class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-location-dot text-slate-400 text-xs"></i>
-                            <span>
-                                {{ $p->trajet->gareArrivee->nom_gare ?? '?' }}
-                                <span class="text-xs text-slate-500 font-normal">
-                                    ({{ $p->trajet->gareArrivee->ville ?? '?' }})
-                                </span>
-                            </span>
-                        </div>
-                    </td>
-
-                    {{-- BUS --}}
-                    <td class="p-4 text-sm text-slate-600">
-                        @if($p->bus)
-                            @php
-                                $statutBus = $p->bus->statut ?? 'Disponible';
-                                $badgeClass = match($statutBus) {
-                                    'Disponible'   => 'bg-emerald-50 text-emerald-700',
-                                    'Maintenance'  => 'bg-amber-50 text-amber-700',
-                                    'Indisponible' => 'bg-red-50 text-red-700',
-                                    default        => 'bg-slate-100 text-slate-700',
-                                };
-                                $emoji = match($statutBus) {
-                                    'Disponible'   => '✅',
-                                    'Maintenance'  => '🔧',
-                                    'Indisponible' => '❌',
-                                    default        => '•',
-                                };
-                            @endphp
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
-                                {{ $emoji }} {{ $p->bus->immatriculation ?? $p->bus->numero ?? 'Bus #'.$p->bus->id }}
-                            </span>
-                            @if($p->bus->modele)
-                                <div class="text-xs text-slate-400 mt-1">{{ $p->bus->modele }}</div>
-                            @endif
-                        @else
-                            <span class="text-slate-400 text-xs">—</span>
-                        @endif
-                    </td>
-
-                    {{-- HORAIRE --}}
-                    <td class="p-4 text-sm text-slate-600">
-                        @php
-                            $heureDepart = optional($p->vagueDepart)->heure_depart;
-                        @endphp
-                        @if($heureDepart)
-                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
-                                <i class="fa-solid fa-clock mr-1"></i>
-                                {{ substr((string) $heureDepart, 0, 5) }}
-                            </span>
-                        @else
-                            <span class="text-slate-400 text-xs">—</span>
-                        @endif
-                    </td>
-
-                    {{-- DATE --}}
-                    <td class="p-4 text-sm text-slate-600">
-                        @if($p->date_voyage)
-                            <i class="fa-solid fa-calendar text-slate-400 mr-1"></i>
-                            {{ \Carbon\Carbon::parse($p->date_voyage)->format('d/m/Y') }}
-                        @else
-                            <span class="text-slate-400 text-xs">—</span>
-                        @endif
-                    </td>
-
-                    {{-- TICKETS / PLACES & ALERTE RUPTURE DE STOCK --}}
-                    <td class="p-4 text-sm">
-                        @php
-                            $vendus    = $p->tickets ? $p->tickets->count() : 0;
-                            $restantes = (int) ($p->places_disponibles ?? 0);
-                            $total     = $restantes + $vendus;
-                        @endphp
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold
-                            {{ $restantes > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700' }}">
-                            {{ $vendus }} / {{ $total }}
-                        </span>
-                        <div class="text-xs text-slate-400 mt-1">
-                            {{ $restantes }} place(s) restante(s)
-                        </div>
-
-                        {{-- Message de rupture de stock --}}
-                        @if($restantes <= 0)
-                            <div class="mt-2 p-1.5 bg-red-50 border border-red-200 rounded text-[11px] font-semibold text-red-700 flex items-center gap-1">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span>Rupture de stock (complet)</span>
-                            </div>
-                        @endif
-                    </td>
-
-                    {{-- STATUT --}}
-                    <td class="p-4 text-sm">
-                        @php
-                            $statut = $p->statut_voyage ?? 'Programmation';
-                            $badges = [
-                                'Programmation' => ['bg-blue-50 text-blue-700',     '📅'],
-                                'En cours'      => ['bg-amber-50 text-amber-700',   '🚀'],
-                                'Terminé'       => ['bg-emerald-50 text-emerald-700','✅'],
-                                'Annulé'        => ['bg-red-50 text-red-700',       '❌'],
-                            ];
-                            [$badgeClass, $emoji] = $badges[$statut] ?? ['bg-slate-100 text-slate-700', '•'];
-                        @endphp
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
-                            {{ $emoji }} {{ $statut }}
-                        </span>
-                    </td>
-
-                    {{-- ACTIONS --}}
-                    <td class="p-4 text-right">
-                        <div class="flex justify-end gap-3">
-                            <a href="{{ route('admin.planifications.show', $p->id) }}"
-                               class="text-slate-600 hover:text-slate-900 text-sm font-medium">
-                                <i class="fa-solid fa-eye mr-1"></i> Détails
-                            </a>
-                            <a href="{{ route('admin.planifications.edit', $p->id) }}"
-                               class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                                <i class="fa-solid fa-pen-to-square mr-1"></i> Modifier
-                            </a>
-                            <form action="{{ route('admin.planifications.destroy', $p->id) }}"
-                                  method="POST"
-                                  onsubmit="return confirm('Voulez-vous supprimer cette planification ?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        class="text-red-600 hover:text-red-900 text-sm font-medium">
-                                    <i class="fa-solid fa-trash-can mr-1"></i> Supprimer
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="7" class="p-12 text-center text-slate-400">
-                        <i class="fa-solid fa-calendar-xmark text-4xl mb-3 text-slate-300"></i>
-                        <p class="text-base">Aucune planification de voyage enregistrée.</p>
-                        <a href="{{ route('admin.planifications.create') }}"
-                           class="inline-block mt-4 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-semibold">
-                            + Planifier un premier voyage
-                        </a>
-                    </td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    {{-- PAGINATION --}}
-    @if(method_exists($planifications, 'links'))
-        <div class="p-4 border-t border-slate-200">
-            {{ $planifications->links() }}
+    {{-- EN-TÊTE AVEC TITRE ET ACTIONS --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <span class="p-3 rounded-2xl bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center text-2xl shadow-sm">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </span>
+                <span>Planifications des Voyages</span>
+            </h1>
+            <p class="text-slate-500 text-base mt-2 ml-[64px]">
+                Programmez les départs, gérez les jauges de places et suivez le remplissage en direct.
+            </p>
         </div>
-    @endif
-</div>
 
+        <div class="flex items-center gap-3">
+            <a href="{{ route('admin.planifications.create') }}"
+               class="inline-flex items-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white px-5 py-3 rounded-2xl text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
+                <i class="fa-solid fa-plus text-amber-400 text-base"></i>
+                <span>Planifier un voyage</span>
+            </a>
+        </div>
+    </div>
+
+    {{-- CONTENEUR TABLEAU AVEC RECHERCHE ET FILTRES --}}
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        
+        {{-- BARRE DE RECHERCHE ET FILTRES RAPIDES --}}
+        <div class="p-6 sm:px-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            
+            <div class="relative w-full md:w-96">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+                <input type="text" 
+                       x-model="searchQuery" 
+                       placeholder="Rechercher trajet, bus, date..." 
+                       class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
+            </div>
+
+            {{-- Filtres statut --}}
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" 
+                        @click="filterStatut = 'all'" 
+                        :class="filterStatut === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                    Tous ({{ $planifications->count() }})
+                </button>
+                <button type="button" 
+                        @click="filterStatut = 'Programmation'" 
+                        :class="filterStatut === 'Programmation' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
+                        class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                    <i class="fa-solid fa-calendar mr-1"></i> Programmés
+                </button>
+                <button type="button" 
+                        @click="filterStatut = 'En cours'" 
+                        :class="filterStatut === 'En cours' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'"
+                        class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                    <i class="fa-solid fa-rocket mr-1"></i> En cours
+                </button>
+                <button type="button" 
+                        @click="filterStatut = 'Terminé'" 
+                        :class="filterStatut === 'Terminé' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'"
+                        class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                    <i class="fa-solid fa-circle-check mr-1"></i> Terminés
+                </button>
+                <button type="button" 
+                        @click="filterStatut = 'Annulé'" 
+                        :class="filterStatut === 'Annulé' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'"
+                        class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                    <i class="fa-solid fa-ban mr-1"></i> Annulés
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/70 border-b border-slate-100 text-xs font-black uppercase tracking-wider text-slate-500">
+                        <th class="py-4 px-8">Ligne & Trajet</th>
+                        <th class="py-4 px-8">Bus Affecté</th>
+                        <th class="py-4 px-8">Horaire</th>
+                        <th class="py-4 px-8">Date de Départ</th>
+                        <th class="py-4 px-8">Remplissage</th>
+                        <th class="py-4 px-8">Statut</th>
+                        <th class="py-4 px-8 text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-slate-100">
+                @forelse($planifications as $p)
+                    @php
+                        $trajetStr = ($p->trajet->gareDepart->nom_gare ?? '') . ' ' . ($p->trajet->gareArrivee->nom_gare ?? '') . ' ' . ($p->trajet->ville_depart ?? '') . ' ' . ($p->trajet->ville_arrivee ?? '');
+                        $busStr = $p->bus->immatriculation ?? '';
+                        $dateStr = $p->date_voyage ? \Carbon\Carbon::parse($p->date_voyage)->format('d/m/Y') : '';
+                        $statut = $p->statut_voyage ?? 'Programmation';
+
+                        $vendus = $p->tickets ? $p->tickets->count() : 0;
+                        $restantes = (int) ($p->places_disponibles ?? 0);
+                        $totalPlaces = $vendus + $restantes;
+                        $taux = $totalPlaces > 0 ? round(($vendus / $totalPlaces) * 100) : 0;
+
+                        $badges = [
+                            'Programmation' => ['bg-blue-50 text-blue-700 border-blue-200/60', 'bg-blue-500'],
+                            'En cours'      => ['bg-amber-50 text-amber-700 border-amber-200/60', 'bg-amber-500'],
+                            'Terminé'       => ['bg-emerald-50 text-emerald-700 border-emerald-200/60', 'bg-emerald-500'],
+                            'Annulé'        => ['bg-red-50 text-red-700 border-red-200/60', 'bg-red-500'],
+                        ];
+                        [$badgeClass, $dotClass] = $badges[$statut] ?? ['bg-slate-100 text-slate-700 border-slate-200', 'bg-slate-400'];
+                    @endphp
+                    <tr x-show="(searchQuery === '' || '{{ strtolower($trajetStr) }}'.includes(searchQuery.toLowerCase()) || '{{ strtolower($busStr) }}'.includes(searchQuery.toLowerCase()) || '{{ $dateStr }}'.includes(searchQuery)) && (filterStatut === 'all' || filterStatut === '{{ $statut }}')"
+                        class="hover:bg-indigo-50/20 transition-colors">
+                        
+                        {{-- TRAJET --}}
+                        <td class="py-5 px-8">
+                            <div class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                                <span>{{ $p->trajet->gareDepart->nom_gare ?? 'Départ' }}</span>
+                                <i class="fa-solid fa-arrow-right text-sm text-indigo-500"></i>
+                                <span>{{ $p->trajet->gareArrivee->nom_gare ?? 'Arrivée' }}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-0.5 font-semibold">
+                                {{ $p->trajet->ville_depart ?? '?' }} → {{ $p->trajet->ville_arrivee ?? '?' }}
+                            </div>
+                        </td>
+
+                        {{-- BUS --}}
+                        <td class="py-5 px-8">
+                            @if($p->bus)
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-slate-100 text-slate-800">
+                                    <i class="fa-solid fa-bus text-slate-500 text-xs"></i>
+                                    {{ $p->bus->immatriculation }}
+                                </span>
+                                @if($p->bus->modele)
+                                    <div class="text-xs text-slate-400 mt-0.5 font-semibold">{{ $p->bus->modele }}</div>
+                                @endif
+                            @else
+                                <span class="text-sm text-slate-400 italic">Non assigné</span>
+                            @endif
+                        </td>
+
+                        {{-- HORAIRE --}}
+                        <td class="py-5 px-8">
+                            @if($p->vagueDepart)
+                                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200/60 font-mono">
+                                    <i class="fa-regular fa-clock text-xs"></i>
+                                    {{ substr($p->vagueDepart->heure_depart, 0, 5) }}
+                                </span>
+                            @else
+                                <span class="text-sm text-slate-400">—</span>
+                            @endif
+                        </td>
+
+                        {{-- DATE --}}
+                        <td class="py-5 px-8 text-sm font-semibold text-slate-700">
+                            <i class="fa-regular fa-calendar text-slate-400 mr-1.5"></i>
+                            {{ $dateStr ?: '—' }}
+                        </td>
+
+                        {{-- REMPLISSAGE / PLACES --}}
+                        <td class="py-5 px-8">
+                            <div class="w-36">
+                                <div class="flex justify-between text-xs mb-1.5">
+                                    <span class="font-bold text-slate-800 text-sm">{{ $vendus }}/{{ $totalPlaces }}</span>
+                                    <span class="font-bold text-slate-500">{{ $taux }}%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500 {{ $taux >= 90 ? 'bg-red-500' : ($taux >= 60 ? 'bg-amber-500' : 'bg-emerald-500') }}"
+                                         style="width: {{ min(100, $taux) }}%;"></div>
+                                </div>
+                                <div class="text-xs text-slate-400 mt-1 font-semibold">
+                                    {{ $restantes }} place(s) dispo
+                                </div>
+                            </div>
+                        </td>
+
+                        {{-- STATUT --}}
+                        <td class="py-5 px-8">
+                            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border {{ $badgeClass }}">
+                                <span class="w-2.5 h-2.5 rounded-full {{ $dotClass }}"></span>
+                                {{ $statut }}
+                            </span>
+                        </td>
+
+                        {{-- ACTIONS --}}
+                        <td class="py-5 px-8 text-right">
+                            <div class="flex justify-end items-center gap-2">
+                                <a href="{{ route('admin.planifications.show', $p->id) }}"
+                                   class="inline-flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors border border-slate-200">
+                                    <i class="fa-solid fa-eye"></i>
+                                    <span>Détails</span>
+                                </a>
+
+                                <a href="{{ route('admin.planifications.edit', $p->id) }}"
+                                   class="inline-flex items-center gap-2 text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors border border-indigo-100">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span>Modifier</span>
+                                </a>
+
+                                <form action="{{ route('admin.planifications.destroy', $p->id) }}"
+                                      method="POST"
+                                      onsubmit="return confirm('Voulez-vous supprimer cette planification ?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors border border-red-100">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                        <span>Supprimer</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="py-20 text-center text-slate-400">
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
+                                    <i class="fa-solid fa-calendar-xmark text-4xl text-slate-300"></i>
+                                </div>
+                                <div>
+                                    <p class="text-base font-bold text-slate-600">Aucune planification de voyage enregistrée.</p>
+                                    <p class="text-sm text-slate-400 mt-1">Commencez par créer votre premier départ planifié.</p>
+                                </div>
+                                <a href="{{ route('admin.planifications.create') }}"
+                                   class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-md">
+                                    <i class="fa-solid fa-plus text-amber-400"></i>
+                                    Planifier un premier voyage
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if(method_exists($planifications, 'links'))
+            <div class="p-5 border-t border-slate-100">
+                {{ $planifications->links() }}
+            </div>
+        @endif
+    </div>
+
+</div>
 @endsection

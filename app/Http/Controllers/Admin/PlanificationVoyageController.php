@@ -77,7 +77,9 @@ class PlanificationVoyageController extends Controller
                 'statut_voyage'        => $p->statut_voyage,
                 'agence_id'            => $p->agence_id,
                 'trajet' => $p->trajet ? [
-                    'id'           => $p->trajet->id,
+                    'id'            => $p->trajet->id,
+                    'ville_depart'  => $p->trajet->ville_depart,
+                    'ville_arrivee' => $p->trajet->ville_arrivee,
                     'gare_depart'  => $p->trajet->gareDepart ? [
                         'id'    => $p->trajet->gareDepart->id,
                         'nom'   => $p->trajet->gareDepart->nom_gare,

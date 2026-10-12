@@ -1,133 +1,289 @@
-<!DOCTYPE html>
-<html lang="fr" class="h-full bg-slate-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Administration - Mobembo Line</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="h-full flex overflow-hidden font-sans antialiased text-slate-900">
+@extends('superadmin.layout')
 
-    <aside class="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-slate-950 text-white">
-        <div class="flex items-center justify-center h-16 px-4 bg-slate-900 border-b border-slate-800">
-            <span class="font-bold text-lg tracking-wide uppercase text-white">Mobembo <span class="text-amber-500">SuperAdmin</span></span>
-        </div>
+@section('title', 'Agences Partenaires')
+@section('header_icon', 'fa-shield-halved')
+@section('header_title', 'Supervision Réseau des Agences')
+@section('header_subtitle', 'Contrôle des accès, blocage/activation et création des agences de transport')
 
-        <!-- Navigation -->
-        <nav class="flex-1 px-3 py-6 flex flex-col">
-            <a href="#" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-amber-500 text-slate-950 font-semibold">
-                <i class="fa-solid fa-building-shield w-6 text-lg"></i>
-                Gestion des Agences
-            </a>
+@section('content')
+<div class="space-y-6" x-data="{ formOpen: @json($errors->any()), searchQuery: '' }">
 
-            <!-- ⭐ Bouton de déconnexion (en bas de la sidebar) -->
-            <div class="mt-auto pt-6 border-t border-slate-800">
-                <form action="{{ route('unified.logout') }}" method="POST">
-                    @csrf
-                    <button type="submit"
-                            class="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-red-900/40 hover:text-red-300 transition-all">
-                        <i class="fa-solid fa-power-off w-6 text-lg"></i>
-                        Se déconnecter
+            @if($errors->any())
+                <div class="p-5 bg-red-50 border border-red-200 text-red-700 rounded-2xl shadow-sm">
+                    <div class="font-bold mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                        <span>Erreur lors de l'enregistrement de l'agence :</span>
+                    </div>
+                    <ul class="list-disc list-inside text-sm space-y-1">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            {{-- 1. CARTES STATISTIQUES GLOBALES DU RÉSEAU --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Agences Partenaires</span>
+                        <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-black text-slate-900">{{ $totalAgences ?? $agences->count() }}</p>
+                    <p class="text-xs text-slate-400 mt-2">Compagnies conventionnées</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Agences Actives</span>
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-black text-emerald-600">{{ $agencesActives ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 mt-2">Autorisées sur la plateforme</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Flotte Nationale</span>
+                        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-bus"></i>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-black text-slate-900">{{ $totalBus ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 mt-2">Bus enregistrés au total</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Agents Réseau</span>
+                        <div class="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-black text-slate-900">{{ $totalAgents ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 mt-2">Guichetiers et contrôleurs</p>
+                </div>
+
+            </div>
+
+            {{-- 2. BOUTON ACTION & FORMULAIRE COLLAPSIBLE D'AJOUT --}}
+            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-7">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-plus-circle text-amber-500"></i>
+                            <span>Nouvelle Agence Partenaire</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Créez l'agence et générez immédiatement les identifiants de son administrateur.
+                        </p>
+                    </div>
+
+                    <button @click="formOpen = !formOpen" 
+                            type="button"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-sm"
+                            :class="formOpen ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 text-amber-400 hover:bg-slate-800'">
+                        <i :class="formOpen ? 'fa-solid fa-chevron-up' : 'fa-solid fa-plus'"></i>
+                        <span x-text="formOpen ? 'Masquer le formulaire' : '+ Enregistrer une agence'"></span>
                     </button>
-                </form>
+                </div>
+
+                <!-- FORMULAIRE ACCORDÉON -->
+                <div x-show="formOpen" x-transition class="mt-6 pt-6 border-t border-slate-100" style="display: none;">
+                    <form action="{{ route('superadmin.agences.store') }}" method="POST">
+                        @csrf
+
+                        <!-- Section Agence -->
+                        <div class="mb-6">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-building text-slate-400"></i> Informations Agence
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom de l'agence <span class="text-red-500">*</span></label>
+                                    <input type="text" name="nom_agence" value="{{ old('nom_agence') }}" required placeholder="Ex: Mikalou Express" 
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Date de partenariat <span class="text-red-500">*</span></label>
+                                    <input type="date" name="date_partenariat" value="{{ old('date_partenariat', date('Y-m-d')) }}" required 
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Compte Admin -->
+                        <div class="mb-6 pt-5 border-t border-slate-100">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-user-shield text-slate-400"></i> Compte Administrateur Assigné
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom de l'admin <span class="text-red-500">*</span></label>
+                                    <input type="text" name="admin_nom" value="{{ old('admin_nom') }}" required placeholder="Ex: Moukala" 
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Prénom de l'admin <span class="text-red-500">*</span></label>
+                                    <input type="text" name="admin_prenom" value="{{ old('admin_prenom') }}" required placeholder="Ex: Jean" 
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Téléphone de connexion <span class="text-red-500">*</span></label>
+                                    <input type="text" name="admin_telephone" value="{{ old('admin_telephone') }}" required placeholder="Ex: 061234567" 
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                    <span class="text-[11px] text-slate-400 mt-1 block">Format : 05 ou 06 suivi de 7 chiffres</span>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Mot de passe initial <span class="text-red-500">*</span></label>
+                                    <input type="password" name="admin_password" required placeholder="Au moins 8 caractères" 
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                    <span class="text-[11px] text-slate-400 mt-1 block">Min. 8 caractères sécurisés</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-3">
+                            <button type="submit" 
+                                    class="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold py-3 px-7 rounded-2xl shadow-lg shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-plus-circle text-amber-400"></i>
+                                <span>Créer l'Agence et Activer le Compte Admin</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </nav>
-    </aside>
 
-    <div class="flex-1 flex flex-col md:pl-64 overflow-hidden">
-        <header class="flex items-center justify-between h-16 px-6 bg-white border-b border-slate-200 z-10">
-            <h1 class="text-xl font-bold text-slate-800">Contrôle Global des Agences Partenaires</h1>
-            <span class="bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-                Super Administrateur
-            </span>
-        </header>
-
-        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-8">
-
-            @if(session('success'))
-                <div class="mb-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 rounded-r-lg">
-                    <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-lg">
-                    <i class="fa-solid fa-circle-exclamation mr-2"></i>{{ session('error') }}
-                </div>
-            @endif
-
-            <!-- FORMULAIRE : AJOUTER UNE AGENCE -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-                <h2 class="text-lg font-bold text-slate-800 mb-4"><i class="fa-solid fa-plus-circle text-amber-500 mr-2"></i> Enregistrer une nouvelle agence</h2>
-                <form action="{{ route('superadmin.agences.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    @csrf
+            {{-- 3. TABLEAU DES AGENCES AVEC RECHERCHE INSTANTANÉE --}}
+            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="p-6 sm:px-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Nom de l'agence</label>
-                        <input type="text" name="nom_agence" required placeholder="Ex: Mikalou Express" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-slate-700"></i>
+                            <span>Liste des Agences Partenaires ({{ $agences->count() }})</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Contrôlez les statuts et l'accès au réseau</p>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Date de partenariat</label>
-                        <input type="date" name="date_partenariat" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full bg-slate-900 text-amber-400 font-semibold py-2 px-4 rounded-lg hover:bg-slate-800 transition-colors">
-                            Créer l'Agence
-                        </button>
-                    </div>
-                </form>
-            </div>
 
-            <!-- TABLEAU : LISTE DES AGENCES -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-800">Liste des Agences ({{ $agences->count() }})</h2>
+                    <!-- Champ de recherche instantané (Alpine.js) -->
+                    <div class="relative w-full sm:w-72">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" 
+                               x-model="searchQuery" 
+                               placeholder="Rechercher une agence..." 
+                               class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                    </div>
                 </div>
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
-                            <th class="py-3 px-6">Nom de l'agence</th>
-                            <th class="py-3 px-6">Date Partenariat</th>
-                            <th class="py-3 px-6">Agents Enregistrés</th>
-                            <th class="py-3 px-6">Bus Attribués</th>
-                            <th class="py-3 px-6">Statut Global</th>
-                            <th class="py-3 px-6 text-right">Actions de Contrôle</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 text-sm">
-                        @forelse($agences as $agence)
-                            <tr>
-                                <td class="py-4 px-6 font-semibold text-slate-800">{{ $agence->nom_agence }}</td>
-                                <td class="py-4 px-6 text-slate-600">{{ $agence->date_partenariat }}</td>
-                                <td class="py-4 px-6"><span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-bold">{{ $agence->agents_count }} agents</span></td>
-                                <td class="py-4 px-6"><span class="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full text-xs font-bold">{{ $agence->bus_count }} bus</span></td>
-                                <td class="py-4 px-6">
-                                    <span class="px-3 py-1 rounded-full text-xs font-bold {{ $agence->statut === 'Actif' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">
-                                        {{ $agence->statut }}
-                                    </span>
-                                </td>
-                                <td class="py-4 px-6 text-right">
-                                    <form action="{{ route('superadmin.agences.toggleStatus', $agence->id) }}" method="POST" class="inline"
-                                          onsubmit="return confirm('{{ $agence->statut === 'Actif' ? 'Bloquer cette agence ? Son administrateur et ses agents seront déconnectés.' : 'Réactiver cette agence ?' }}');">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-lg {{ $agence->statut === 'Actif' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' }}">
-                                            <i class="fa-solid {{ $agence->statut === 'Actif' ? 'fa-lock' : 'fa-lock-open' }} mr-1"></i>
-                                            {{ $agence->statut === 'Actif' ? 'Bloquer l\'agence' : 'Activer l\'agence' }}
-                                        </button>
-                                    </form>
-                                </td>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                <th class="py-3.5 px-6">Agence Partenaire</th>
+                                <th class="py-3.5 px-6">Administrateur</th>
+                                <th class="py-3.5 px-6">Agents Inscrits</th>
+                                <th class="py-3.5 px-6">Bus Attribués</th>
+                                <th class="py-3.5 px-6">Statut Réseau</th>
+                                <th class="py-3.5 px-6 text-right">Action de Contrôle</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="py-6 text-center text-slate-400">Aucune agence enregistrée pour le moment.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm">
+                            @forelse($agences as $agence)
+                                @php
+                                    $monogram = strtoupper(substr($agence->nom_agence, 0, 2));
+                                    $admin = $agence->admin;
+                                @endphp
+                                <tr x-show="searchQuery === '' || '{{ strtolower($agence->nom_agence) }}'.includes(searchQuery.toLowerCase()) || '{{ strtolower($admin?->telephone ?? '') }}'.includes(searchQuery.toLowerCase())"
+                                    class="hover:bg-slate-50/80 transition-colors">
+                                    
+                                    {{-- Agence --}}
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-amber-400 font-extrabold text-xs flex items-center justify-center shrink-0 shadow-inner">
+                                                {{ $monogram }}
+                                            </div>
+                                            <div>
+                                                <div class="font-extrabold text-slate-900">{{ $agence->nom_agence }}</div>
+                                                <div class="text-[11px] text-slate-400">Partenaire depuis le {{ \Carbon\Carbon::parse($agence->date_partenariat)->format('d/m/Y') }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- Administrateur --}}
+                                    <td class="py-4 px-6">
+                                        @if($admin)
+                                            <div class="font-bold text-xs text-slate-800">{{ $admin->prenom }} {{ $admin->nom }}</div>
+                                            <div class="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                                <i class="fa-solid fa-phone text-[9px] text-slate-400"></i>
+                                                <span>{{ $admin->telephone }}</span>
+                                            </div>
+                                        @else
+                                            <span class="text-xs text-slate-400 italic">Aucun admin</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Agents --}}
+                                    <td class="py-4 px-6">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700">
+                                            <i class="fa-solid fa-user-tie text-[10px]"></i>
+                                            {{ $agence->agents_count }} agents
+                                        </span>
+                                    </td>
+
+                                    {{-- Bus --}}
+                                    <td class="py-4 px-6">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700">
+                                            <i class="fa-solid fa-bus text-[10px]"></i>
+                                            {{ $agence->bus_count }} bus
+                                        </span>
+                                    </td>
+
+                                    {{-- Statut Réseau --}}
+                                    <td class="py-4 px-6">
+                                        @if($agence->statut === 'Actif')
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                Actif
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-50 text-red-700 border border-red-200/60">
+                                                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                                Bloqué
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Actions --}}
+                                    <td class="py-4 px-6 text-right">
+                                        <form action="{{ route('superadmin.agences.toggleStatus', $agence->id) }}" method="POST" class="inline"
+                                              onsubmit="return confirm('{{ $agence->statut === 'Actif' ? 'Bloquer cette agence ? Les accès de son administrateur et de ses agents seront révoqués.' : 'Réactiver cette agence sur le réseau ?' }}');">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" 
+                                                    class="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all {{ $agence->statut === 'Actif' ? 'bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-sm' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:shadow-sm' }}">
+                                                <i class="fa-solid {{ $agence->statut === 'Actif' ? 'fa-lock' : 'fa-lock-open' }} text-[11px]"></i>
+                                                <span>{{ $agence->statut === 'Actif' ? 'Bloquer' : 'Activer' }}</span>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="py-12 text-center text-slate-400">
+                                        <i class="fa-solid fa-building-circle-xmark text-4xl mb-3 text-slate-300"></i>
+                                        <p class="text-sm font-semibold text-slate-600">Aucune agence enregistrée.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-        </main>
-    </div>
-</body>
-</html>
+</div>
+@endsection

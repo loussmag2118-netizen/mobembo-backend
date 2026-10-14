@@ -1,0 +1,51 @@
+# Déploiement automatique de l'API sur Cloud Run à chaque push sur main
+# (déclencheur Cloud Build relié au dépôt GitHub).
+#
+# 1. Construit l'image Docker (Dockerfile du projet)
+# 2. L'envoie dans Artifact Registry (tag du commit + latest)
+# 3. Redéploie le service Cloud Run avec cette image.
+#    Les variables et secrets déjà configurés sur le service sont conservés.
+
+substitutions:
+  _REGION: us-east1
+  _SERVICE: mobembo-api
+  _IMAGE: us-east1-docker.pkg.dev/${PROJECT_ID}/mobembo-repo/mobembo-backend
+
+steps:
+  - id: construire
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE}:${SHORT_SHA}
+      - -t
+      - ${_IMAGE}:latest
+      - .
+
+  - id: envoyer
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_IMAGE}
+
+  - id: deployer
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --quiet
+
+images:
+  - ${_IMAGE}:${SHORT_SHA}
+  - ${_IMAGE}:latest
+
+options:
+  # Obligatoire quand le déclencheur utilise un compte de service choisi
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

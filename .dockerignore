@@ -1,0 +1,27 @@
+# Secrets : les variables sont fournies par la plateforme, pas par l'image
+.env
+.env.*
+!.env.example
+
+# Sauvegardes de base de données
+*.sql
+
+# Dépendances réinstallées dans l'image
+vendor
+node_modules
+
+# Fichiers locaux / générés
+.git
+.idea
+.vscode
+public/storage
+public/hot
+storage/*.key
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/pail
+tests
+Dockerfile
+.dockerignore

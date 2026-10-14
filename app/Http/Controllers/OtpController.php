@@ -29,6 +29,16 @@ class OtpController extends Controller
     }
 
     /**
+     * Le mode DEV (code généré localement et renvoyé dans la réponse) n'est
+     * autorisé qu'hors production : en ligne, il permettrait d'obtenir le
+     * code de n'importe quel numéro sans recevoir le SMS.
+     */
+    private function modeDevAutorise(): bool
+    {
+        return ! app()->environment('production');
+    }
+
+    /**
      * Envoie un code OTP par SMS via Twilio Verify.
      * ⭐ type_usage est désormais OPTIONNEL (défaut = INSCRIPTION).
      */
@@ -52,8 +62,16 @@ class OtpController extends Controller
         $result = $this->twilioVerify->sendCode($telephoneE164);
 
         if (!$result['success']) {
-            // ⭐ Si Twilio échoue → on bascule en mode DEV automatiquement
-            Log::warning('Twilio KO → bascule en mode dev pour ' . $request->telephone);
+            Log::warning('Twilio KO pour ' . $request->telephone . ' : ' . ($result['message'] ?? ''));
+
+            // En production : jamais de code dans la réponse
+            if (! $this->modeDevAutorise()) {
+                return response()->json([
+                    'message' => "Impossible d'envoyer le SMS de vérification pour le moment. Réessayez dans quelques instants.",
+                ], 503);
+            }
+
+            // ⭐ Hors production : bascule en mode DEV automatiquement
 
             $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put('otp_' . $request->telephone, $code, now()->addMinutes(10));
@@ -64,7 +82,7 @@ class OtpController extends Controller
                 'message'    => 'Code OTP généré (mode dev — Twilio indisponible).',
                 'status'     => 'dev',
                 'dev_mode'   => true,
-                'code'       => $code,   // ⚠️ Retirer en production
+                'code'       => $code,   // hors production uniquement
                 'telephone'  => $request->telephone,
             ], 200);
         }
@@ -81,6 +99,8 @@ class OtpController extends Controller
      */
     public function sendDev(Request $request)
     {
+        abort_unless($this->modeDevAutorise(), 404);
+
         $request->validate([
             'telephone' => 'required|string|size:9',
         ]);
@@ -121,9 +141,9 @@ class OtpController extends Controller
         $telephoneE164 = $this->normalizePhone($request->telephone);
         $typeUsage     = $request->input('type_usage', 'INSCRIPTION');
 
-        // ⭐ On essaie d'abord le cache local (fallback dev)
+        // ⭐ On essaie d'abord le cache local (fallback dev, hors production)
         $cacheKey    = 'otp_' . $request->telephone;
-        $codeAttendu = Cache::get($cacheKey);
+        $codeAttendu = $this->modeDevAutorise() ? Cache::get($cacheKey) : null;
 
         $isValid = false;
 

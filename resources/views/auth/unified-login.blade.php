@@ -10,6 +10,7 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
+    @include('partials.favicon')
 </head>
 <body class="h-full flex items-center justify-center p-4 bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-900 relative overflow-hidden">
 

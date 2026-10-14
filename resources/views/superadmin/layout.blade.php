@@ -27,6 +27,7 @@
             box-shadow: 0 12px 24px -10px rgba(15, 23, 42, 0.08);
         }
     </style>
+    @include('partials.favicon')
 </head>
 <body class="h-full flex overflow-hidden font-sans antialiased text-slate-900 bg-slate-50/70">
 

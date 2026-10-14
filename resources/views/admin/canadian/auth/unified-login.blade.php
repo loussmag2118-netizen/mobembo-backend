@@ -32,6 +32,7 @@
             box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
         }
     </style>
+    @include('partials.favicon')
 </head>
 <body class="flex items-center justify-center p-4">
 

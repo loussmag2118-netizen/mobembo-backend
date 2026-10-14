@@ -192,6 +192,7 @@
     </style>
 
     @stack('styles')
+    @include('partials.favicon')
 </head>
 <body class="h-full flex overflow-hidden font-sans antialiased text-slate-800 dark:text-slate-100 bg-[#F4F5F7] dark:bg-[#0B131E]"
       x-data="{ 

@@ -23,6 +23,7 @@
             -webkit-backdrop-filter: blur(20px);
         }
     </style>
+    @include('partials.favicon')
 </head>
 <body class="h-full flex items-center justify-center font-sans antialiased text-white overflow-hidden">
     <!-- Fond dégradé + formes animées -->

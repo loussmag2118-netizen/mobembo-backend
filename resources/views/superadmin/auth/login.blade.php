@@ -21,6 +21,7 @@
             }
         }
     </script>
+    @include('partials.favicon')
 </head>
 <body class="h-full flex items-center justify-center font-sans antialiased bg-slate-950">
 

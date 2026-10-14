@@ -45,6 +45,8 @@ images:
   - ${_IMAGE}:latest
 
 options:
+  # Permet d'utiliser ${PROJECT_ID} dans _IMAGE
+  dynamicSubstitutions: true
   # Obligatoire quand le déclencheur utilise un compte de service choisi
   logging: CLOUD_LOGGING_ONLY
 

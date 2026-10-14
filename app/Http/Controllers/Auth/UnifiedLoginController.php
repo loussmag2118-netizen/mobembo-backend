@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CanadianUser;
 use App\Models\SuperAdmin;
 use App\Models\Utilisateur;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -59,6 +60,7 @@ class UnifiedLoginController extends Controller
         if ($superAdmin && Hash::check($password, $superAdmin->mot_de_passe)) {
             Auth::guard('superadmin')->login($superAdmin);
             $request->session()->regenerate();
+            Audit::log('connexion.reussie', $superAdmin, ['espace' => 'superadmin']);
 
             return redirect()->intended(route('superadmin.agences.index'));
         }
@@ -78,6 +80,7 @@ class UnifiedLoginController extends Controller
         if ($canadian && Hash::check($password, $canadian->password)) {
             Auth::guard('canadian')->login($canadian, $request->boolean('remember'));
             $request->session()->regenerate();
+            Audit::log('connexion.reussie', $canadian, ['espace' => 'canadian']);
 
             return redirect()->intended(route('canadian.admin'));
         }
@@ -119,6 +122,7 @@ class UnifiedLoginController extends Controller
 
             Auth::guard('web')->login($user, $request->boolean('remember'));
             $request->session()->regenerate();
+            Audit::log('connexion.reussie', $user, ['espace' => 'admin', 'role' => $user->role]);
 
             return redirect()->intended('/admin/dashboard');
         }
@@ -126,6 +130,8 @@ class UnifiedLoginController extends Controller
         // ============================================================
         // ❌ AUCUN COMPTE TROUVÉ
         // ============================================================
+        Audit::log('connexion.echouee', null, ['identifiant' => mb_substr($identifiant, 0, 80)]);
+
         throw ValidationException::withMessages([
             'identifiant' => 'Les identifiants fournis sont incorrects.',
         ]);

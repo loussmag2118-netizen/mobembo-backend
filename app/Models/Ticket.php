@@ -25,32 +25,44 @@ class Ticket extends Model
         'prenom_passager',
         'telephone_passager',     // ⬅️ NOUVEAU
 
-        // === Destination figée ===
+        // === Trajet figé au moment de la vente ===
+        'ville_depart',
+        'gare_depart_id',
         'ville_arrivee',          // ⬅️ NOUVEAU
         'quartier',               // ⬅️ NOUVEAU
         'gare_arrivee_id',        // ⬅️ NOUVEAU
+        'nom_trajet',
         'numero_bus',
+        'horaire',
+        'nom_vague',
 
         // === Détails ===
         'nombre_places_reservees',
+        'prix',
         'montant_total',
 
         // === Statuts ===
         'statut_paiement',
         'statut_embarquement',
+        'present',
 
         // === Paiement ===
         'mode_paiement',          // ⬅️ NOUVEAU
+        'telephone_paiement',
+        'reference_paiement',     // regroupe les tickets d'un même paiement
         'date_paiement',          // ⬅️ NOUVEAU
 
         // === Dates ===
         'date_reservation',
+        'expire_le',              // fin de la réservation temporaire (En_Attente)
     ];
 
     protected $casts = [
         'date_reservation' => 'datetime',
         'date_paiement'    => 'datetime',
+        'expire_le'        => 'datetime',
         'montant_total'    => 'decimal:2',
+        'prix'             => 'decimal:2',
     ];
 
     // ================================================================

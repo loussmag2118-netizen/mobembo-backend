@@ -412,6 +412,7 @@
                             </div>
                         </div>
 
+                        @if(auth()->user()?->role === 'Admin') {{-- Gestion : réservée aux administrateurs --}}
                         <!-- 3. Flotte des Bus -->
                         <div class="relative group">
                             <a href="{{ route('admin.bus.index') }}" 
@@ -496,6 +497,7 @@
                                 Équipe Guichets
                             </div>
                         </div>
+                        @endif
 
                     </div>
                 </div>
@@ -509,6 +511,7 @@
                     <div x-show="sidebarCollapsed" class="w-8 h-0.5 bg-slate-200 dark:bg-slate-800 mx-auto my-3 rounded-full"></div>
 
                     <div class="space-y-1.5">
+                        @if(auth()->user()?->role === 'Admin')
                         <!-- Statistiques -->
                         <div class="relative group">
                             <a href="{{ route('admin.statistiques.index') }}" 
@@ -525,6 +528,7 @@
                                 Statistiques Flotte
                             </div>
                         </div>
+                        @endif
 
                         <!-- Historique -->
                         <div class="relative group">

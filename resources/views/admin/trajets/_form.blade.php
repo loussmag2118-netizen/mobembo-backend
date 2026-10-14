@@ -171,6 +171,39 @@
         @enderror
     </div>
 
+    {{-- INFORMATIONS POUR LE CLIENT (facultatives) --}}
+    <div class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+        <div>
+            <p class="text-sm font-extrabold text-slate-900">Informations pour le voyageur</p>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">Facultatif — affiché dans l'application uniquement si renseigné.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-2">
+                <label for="duree_minutes" class="block text-xs font-bold uppercase tracking-wider text-slate-700">Durée estimée (minutes)</label>
+                <input type="number" name="duree_minutes" id="duree_minutes" min="10" max="4320" step="5"
+                       value="{{ old('duree_minutes', $trajet->duree_minutes ?? '') }}" placeholder="Ex. 300 pour 5 h"
+                       class="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                @error('duree_minutes') <p class="text-rose-600 text-xs font-bold">{{ $message }}</p> @enderror
+            </div>
+            <div class="space-y-2">
+                <label for="bagages_autorises" class="block text-xs font-bold uppercase tracking-wider text-slate-700">Bagages autorisés</label>
+                <input type="text" name="bagages_autorises" id="bagages_autorises" maxlength="255"
+                       value="{{ old('bagages_autorises', $trajet->bagages_autorises ?? '') }}" placeholder="Ex. 1 sac de voyage par passager"
+                       class="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                @error('bagages_autorises') <p class="text-rose-600 text-xs font-bold">{{ $message }}</p> @enderror
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <label for="conditions_voyage" class="block text-xs font-bold uppercase tracking-wider text-slate-700">Conditions du voyage (annulation, modification…)</label>
+            <textarea name="conditions_voyage" id="conditions_voyage" rows="3" maxlength="2000"
+                      placeholder="Ex. Présentez-vous 30 minutes avant le départ. Billet non remboursable sauf annulation du départ par l'agence."
+                      class="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">{{ old('conditions_voyage', $trajet->conditions_voyage ?? '') }}</textarea>
+            @error('conditions_voyage') <p class="text-rose-600 text-xs font-bold">{{ $message }}</p> @enderror
+        </div>
+    </div>
+
     {{-- 4. HORAIRES DE DÉPART (VAGUES) --}}
     <div class="space-y-3">
         <div class="flex items-center justify-between">

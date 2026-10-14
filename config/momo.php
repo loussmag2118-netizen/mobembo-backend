@@ -69,4 +69,12 @@ return [
 
     'min_amount' => env('MOMO_MIN_AMOUNT', 100),
 
+    /*
+    | Adresse de retour appelée par MTN à la fin d'un paiement (X-Callback-Url).
+    | Ex. https://<api>/api/paiements/mtn/callback — vide = pas de callback,
+    | le statut est alors obtenu en interrogeant MTN.
+    */
+
+    'callback_url' => env('MTN_CALLBACK_URL'),
+
 ];

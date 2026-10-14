@@ -44,7 +44,7 @@
                         <th class="py-4 px-8">Référence / Ticket</th>
                         <th class="py-4 px-8">Trajet</th>
                         <th class="py-4 px-8">Date de Voyage</th>
-                        <th class="py-4 px-8">Statut Agents</th>
+                        <th class="py-4 px-8">Paiement</th>
                         <th class="py-4 px-8 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -85,28 +85,45 @@
                             </td>
 
                             <td class="py-5 px-8">
-                                @if(isset($v->envoye_aux_agents) && $v->envoye_aux_agents)
-                                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                                        Transmis aux agents
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                        En attente
-                                    </span>
+                                @php
+                                    $badges = [
+                                        'Paye'       => ['bg-emerald-50 text-emerald-700 border-emerald-200/60', 'bg-emerald-500', 'Payé'],
+                                        'En_Attente' => ['bg-amber-50 text-amber-700 border-amber-200/60', 'bg-amber-500 animate-pulse', 'En attente'],
+                                        'Echoue'     => ['bg-slate-100 text-slate-600 border-slate-200', 'bg-slate-400', 'Annulé / échoué'],
+                                        'Rembourse'  => ['bg-sky-50 text-sky-700 border-sky-200/60', 'bg-sky-500', 'Remboursé'],
+                                    ];
+                                    [$classe, $point, $libelle] = $badges[$v->statut_paiement] ?? $badges['En_Attente'];
+                                @endphp
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border {{ $classe }}">
+                                    <span class="w-2.5 h-2.5 rounded-full {{ $point }}"></span>
+                                    {{ $libelle }}
+                                </span>
+                                @if($v->billet_test)
+                                    <span class="ml-1 px-2 py-1 rounded-lg text-[10px] font-black bg-orange-100 text-orange-700">TEST</span>
                                 @endif
                             </td>
 
                             <td class="py-5 px-8 text-right">
-                                <form action="{{ route('admin.voyageurs.destroy', $v->id) }}" method="POST" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce voyageur ?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="inline-flex items-center gap-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors border border-red-100">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                        <span>Supprimer</span>
-                                    </button>
-                                </form>
+                                @if(auth()->user()?->role === 'Admin')
+                                    @if($v->statut_paiement === 'Paye')
+                                        <form action="{{ route('admin.voyageurs.rembourser', $v->id) }}" method="POST" class="inline"
+                                              onsubmit="return confirm('Confirmez-vous que ce billet a été remboursé au client ? Sa place sera libérée.')">
+                                            @csrf
+                                            <button type="submit" class="inline-flex items-center gap-2 text-sm font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 px-4 py-2 rounded-xl transition-colors border border-sky-100">
+                                                <i class="fa-solid fa-rotate-left"></i>
+                                                <span>Marquer remboursé</span>
+                                            </button>
+                                        </form>
+                                    @endif
+                                    <form action="{{ route('admin.voyageurs.destroy', $v->id) }}" method="POST" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce voyageur ?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex items-center gap-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors border border-red-100">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                            <span>Supprimer</span>
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty

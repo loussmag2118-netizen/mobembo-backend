@@ -49,4 +49,18 @@ class Agence extends Model
     {
         return $this->hasMany(Trajet::class, 'agence_id');
     }
+
+    /**
+     * Logo affiché par l'application mobile (fichier embarqué dans l'app).
+     * Logo Mobembo Line par défaut pour une nouvelle agence.
+     */
+    public function getLogoAppAttribute(): string
+    {
+        return [
+            'Océan du Nord'   => 'assets/images/oceandunord.png',
+            'Nzoko Transport' => 'assets/images/Nzoko.jpg',
+            'Stelimac'        => 'assets/images/Stelimac.jpg',
+            'Transbony'       => 'assets/images/transbony.png',
+        ][$this->nom_agence] ?? 'assets/images/Logo.png';
+    }
 }

@@ -69,6 +69,7 @@ Route::get('/login', [UnifiedLoginController::class, 'showLoginForm'])
     ->name('unified.login');
 
 Route::post('/login', [UnifiedLoginController::class, 'login'])
+    ->middleware('throttle:connexion')
     ->name('unified.login.submit');
 
 // Déconnexion universelle (déconnecte les 3 guards)
@@ -136,39 +137,52 @@ Route::middleware(['auth', 'agence.active'])
         Route::get('/historique/{id}', [AdminHistoriqueController::class, 'show'])
             ->name('historique.show');
 
-        Route::get('/bus/trashed', [BusController::class, 'trashed'])->name('bus.trashed');
-        Route::post('/bus/{id}/restore', [BusController::class, 'restore'])->name('bus.restore');
-        Route::delete('/bus/{id}/force-delete', [BusController::class, 'forceDelete'])->name('bus.forceDelete');
-        Route::resource('bus', BusController::class);
+        // --- Gestion : réservée aux administrateurs de l'agence
+        Route::middleware('role:Admin')->group(function () {
+            Route::get('/bus/trashed', [BusController::class, 'trashed'])->name('bus.trashed');
+            Route::post('/bus/{id}/restore', [BusController::class, 'restore'])->name('bus.restore');
+            Route::delete('/bus/{id}/force-delete', [BusController::class, 'forceDelete'])->name('bus.forceDelete');
+            Route::resource('bus', BusController::class);
 
-        Route::get('/gares/trashed', [GareController::class, 'trashed'])->name('gares.trashed');
-        Route::post('/gares/{id}/restore', [GareController::class, 'restore'])->name('gares.restore');
-        Route::delete('/gares/{id}/force-delete', [GareController::class, 'forceDelete'])->name('gares.forceDelete');
-        Route::get('/gares/{gare}/historique', [GareController::class, 'historique'])->name('gares.historique');
-        Route::resource('gares', GareController::class);
+            Route::get('/gares/trashed', [GareController::class, 'trashed'])->name('gares.trashed');
+            Route::post('/gares/{id}/restore', [GareController::class, 'restore'])->name('gares.restore');
+            Route::delete('/gares/{id}/force-delete', [GareController::class, 'forceDelete'])->name('gares.forceDelete');
+            Route::get('/gares/{gare}/historique', [GareController::class, 'historique'])->name('gares.historique');
+            Route::resource('gares', GareController::class);
 
-        Route::get('/trajets/trashed', [TrajetController::class, 'trashed'])->name('trajets.trashed');
-        Route::post('/trajets/{id}/restore', [TrajetController::class, 'restore'])->name('trajets.restore');
-        Route::delete('/trajets/{id}/force-delete', [TrajetController::class, 'forceDelete'])->name('trajets.forceDelete');
-        Route::resource('trajets', TrajetController::class);
+            Route::get('/trajets/trashed', [TrajetController::class, 'trashed'])->name('trajets.trashed');
+            Route::post('/trajets/{id}/restore', [TrajetController::class, 'restore'])->name('trajets.restore');
+            Route::delete('/trajets/{id}/force-delete', [TrajetController::class, 'forceDelete'])->name('trajets.forceDelete');
+            Route::resource('trajets', TrajetController::class);
 
-        Route::get('/vagues/trashed', [VagueDepartController::class, 'trashed'])->name('vagues.trashed');
-        Route::post('/vagues/{id}/restore', [VagueDepartController::class, 'restore'])->name('vagues.restore');
-        Route::delete('/vagues/{id}/force-delete', [VagueDepartController::class, 'forceDelete'])->name('vagues.forceDelete');
-        Route::resource('vagues', VagueDepartController::class);
+            Route::get('/vagues/trashed', [VagueDepartController::class, 'trashed'])->name('vagues.trashed');
+            Route::post('/vagues/{id}/restore', [VagueDepartController::class, 'restore'])->name('vagues.restore');
+            Route::delete('/vagues/{id}/force-delete', [VagueDepartController::class, 'forceDelete'])->name('vagues.forceDelete');
+            Route::resource('vagues', VagueDepartController::class);
 
-        Route::get('/agents/trashed', [AgentController::class, 'trashed'])->name('agents.trashed');
-        Route::post('/agents/{id}/restore', [AgentController::class, 'restore'])->name('agents.restore');
-        Route::delete('/agents/{id}/force-delete', [AgentController::class, 'forceDelete'])->name('agents.forceDelete');
-        Route::get('/agents/{agent}/historique', [AgentHistoryController::class, 'show'])->name('agents.historique');
-        Route::resource('agents', AgentController::class);
+            Route::get('/agents/trashed', [AgentController::class, 'trashed'])->name('agents.trashed');
+            Route::post('/agents/{id}/restore', [AgentController::class, 'restore'])->name('agents.restore');
+            Route::delete('/agents/{id}/force-delete', [AgentController::class, 'forceDelete'])->name('agents.forceDelete');
+            Route::get('/agents/{agent}/historique', [AgentHistoryController::class, 'show'])->name('agents.historique');
+            Route::resource('agents', AgentController::class);
 
-        Route::resource('planifications', PlanificationVoyageController::class)
-            ->parameters(['planifications' => 'planificationVoyage']);
+            Route::resource('planifications', PlanificationVoyageController::class)
+                ->except(['index', 'show'])
+                ->parameters(['planifications' => 'planificationVoyage']);
 
-        Route::resource('voyageurs', VoyageurController::class);
-        Route::resource('tickets', TicketAdminController::class);
-        Route::resource('statistiques', StatistiqueController::class);
+            Route::post('/voyageurs/{id}/rembourser', [VoyageurController::class, 'rembourser'])->name('voyageurs.rembourser');
+            Route::resource('voyageurs', VoyageurController::class)->except(['index', 'show']);
+            Route::resource('statistiques', StatistiqueController::class);
+        });
+
+        // --- Lecture : accessible aux agents (guichet / contrôle) et aux admins
+        Route::middleware('role:Admin,Agent')->group(function () {
+            Route::resource('planifications', PlanificationVoyageController::class)
+                ->only(['index', 'show'])
+                ->parameters(['planifications' => 'planificationVoyage']);
+            Route::resource('voyageurs', VoyageurController::class)->only(['index', 'show']);
+            Route::resource('tickets', TicketAdminController::class)->only(['index']);
+        });
     });
 
 // ================================================================

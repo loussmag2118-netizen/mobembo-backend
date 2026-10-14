@@ -91,6 +91,9 @@ class TrajetController extends Controller
             ],
             'horaires'        => 'required|array|min:1',
             'horaires.*'      => 'required|date_format:H:i',
+            'duree_minutes'     => 'nullable|integer|min:10|max:4320',
+            'bagages_autorises' => 'nullable|string|max:255',
+            'conditions_voyage' => 'nullable|string|max:2000',
         ], [
             'gare_depart_id.unique'     => 'Un trajet identique (même gare de départ et d\'arrivée) existe déjà pour cette agence.',
             'gare_arrivee_id.different' => 'La gare d\'arrivée doit être différente de la gare de départ.',
@@ -106,6 +109,9 @@ class TrajetController extends Controller
                 'ville_arrivee'   => $villeArrivee,
                 'gare_arrivee_id' => $request->gare_arrivee_id,
                 'bus_id'          => $request->bus_id,
+                'duree_minutes'     => $request->filled('duree_minutes') ? (int) $request->duree_minutes : null,
+                'bagages_autorises' => $request->filled('bagages_autorises') ? trim($request->bagages_autorises) : null,
+                'conditions_voyage' => $request->filled('conditions_voyage') ? trim($request->conditions_voyage) : null,
             ]);
 
             // ⭐ Crée les vagues (horaires)
@@ -190,6 +196,9 @@ class TrajetController extends Controller
             ],
             'horaires'        => 'required|array|min:1',
             'horaires.*'      => 'required|date_format:H:i',
+            'duree_minutes'     => 'nullable|integer|min:10|max:4320',
+            'bagages_autorises' => 'nullable|string|max:255',
+            'conditions_voyage' => 'nullable|string|max:2000',
         ], [
             'gare_depart_id.unique'     => 'Un trajet identique (même gare de départ et d\'arrivée) existe déjà pour cette agence.',
             'gare_arrivee_id.different' => 'La gare d\'arrivée doit être différente de la gare de départ.',
@@ -204,6 +213,9 @@ class TrajetController extends Controller
                 'ville_arrivee'   => $villeArrivee,
                 'gare_arrivee_id' => $request->gare_arrivee_id,
                 'bus_id'          => $request->bus_id,
+                'duree_minutes'     => $request->filled('duree_minutes') ? (int) $request->duree_minutes : null,
+                'bagages_autorises' => $request->filled('bagages_autorises') ? trim($request->bagages_autorises) : null,
+                'conditions_voyage' => $request->filled('conditions_voyage') ? trim($request->conditions_voyage) : null,
             ]);
 
             // ⭐ Synchronise les vagues

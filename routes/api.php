@@ -16,8 +16,8 @@ use App\Http\Controllers\ImageController;
 // ============================================================
 // CONTRÔLEURS PAIEMENT MOBILE (dans Api/)
 // ============================================================
-use App\Http\Controllers\Api\MomoController;
-use App\Http\Controllers\Api\AirtelMoneyController;
+use App\Http\Controllers\Api\PaiementBusController;
+use App\Http\Controllers\Api\ClientBusController;
 
 // ============================================================
 // CONTRÔLEURS API — AGENT MOBILE
@@ -50,27 +50,27 @@ use App\Http\Controllers\Admin\TicketAdminController;
 // ============================================================
 // ROUTES PUBLIQUES — Authentification Mobembo Line
 // ============================================================
-Route::post('/register',        [AuthController::class, 'register']);
-Route::post('/login',           [AuthController::class, 'login']);
-Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
+Route::post('/register',        [AuthController::class, 'register'])->middleware('throttle:connexion');
+Route::post('/login',           [AuthController::class, 'login'])->middleware('throttle:connexion');
+Route::post('/reset-password',  [AuthController::class, 'resetPassword'])->middleware('throttle:connexion');
 
 // ============================================================
 // ROUTES PUBLIQUES — Canadian Airways
 // ============================================================
-Route::post('/canadian/register',       [CanadianAuthController::class, 'register']);
-Route::post('/canadian/login',          [CanadianAuthController::class, 'login']);
-Route::post('/canadian/reset-password', [CanadianAuthController::class, 'resetPassword']);
+Route::post('/canadian/register',       [CanadianAuthController::class, 'register'])->middleware('throttle:connexion');
+Route::post('/canadian/login',          [CanadianAuthController::class, 'login'])->middleware('throttle:connexion');
+Route::post('/canadian/reset-password', [CanadianAuthController::class, 'resetPassword'])->middleware('throttle:connexion');
 
 // ============================================================
 // ROUTES PUBLIQUES — OTP
 // ============================================================
-Route::post('/send-otp',   [OtpController::class, 'send']);
-Route::post('/verify-otp', [OtpController::class, 'verify']);
+Route::post('/send-otp',   [OtpController::class, 'send'])->middleware('throttle:otp');
+Route::post('/verify-otp', [OtpController::class, 'verify'])->middleware('throttle:connexion');
 
-Route::post('/canadian/send-otp',   [OtpController::class, 'send']);
-Route::post('/canadian/verify-otp', [OtpController::class, 'verify']);
+Route::post('/canadian/send-otp',   [OtpController::class, 'send'])->middleware('throttle:otp');
+Route::post('/canadian/verify-otp', [OtpController::class, 'verify'])->middleware('throttle:connexion');
 
-Route::post('/send-otp-dev', [OtpController::class, 'sendDev']);
+Route::post('/send-otp-dev', [OtpController::class, 'sendDev'])->middleware('throttle:otp');
 
 // ============================================================
 // VÉRIFICATION DU NUMÉRO AVANT INSCRIPTION
@@ -105,6 +105,10 @@ Route::get('/gares',          [GareController::class, 'apiIndex']);
 Route::get('/trajets',        [TrajetController::class, 'apiIndex']);
 Route::get('/planifications', [PlanificationVoyageController::class, 'apiIndex']);
 Route::get('/agence-donnees', [TrajetController::class, 'apiAgenceDonnees']);
+
+// Recherche de voyages toutes agences confondues
+Route::get('/villes-terrestres', [ClientBusController::class, 'villes']);
+Route::get('/voyages/recherche', [ClientBusController::class, 'rechercher'])->middleware('throttle:60,1');
 
 // ============================================================
 // ⭐ ROUTES PUBLIQUES — Recherche de vols Canadian Airways
@@ -168,6 +172,11 @@ Route::middleware('auth:canadian-api')->prefix('canadian')->group(function () {
 // ============================================================
 // ROUTES PROTÉGÉES (auth:sanctum) — Mobembo Line
 // ============================================================
+// Retours des opérateurs de paiement : le contenu n'est pas cru sur parole,
+// le statut est revérifié auprès de l'API de l'opérateur.
+Route::match(['post', 'put'], '/paiements/mtn/callback', [PaiementBusController::class, 'callbackMtn'])->middleware('throttle:120,1');
+Route::post('/paiements/airtel/callback', [PaiementBusController::class, 'callbackAirtel'])->middleware('throttle:120,1');
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Profil
@@ -178,8 +187,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/upload', [ImageController::class, 'upload']);
 
     // Paiements mobile
-    Route::post('/momo/pay',   [MomoController::class, 'requestToPay']);
-    Route::post('/airtel/pay', [AirtelMoneyController::class, 'requestToPay']);
+    Route::middleware('throttle:paiement')->group(function () {
+        Route::post('/momo/pay',   [PaiementBusController::class, 'payerMtn']);
+        Route::post('/airtel/pay', [PaiementBusController::class, 'payerAirtel']);
+    });
+
+    // Billets du client connecté
+    Route::get('/mes-billets', [ClientBusController::class, 'mesBillets']);
+
+    // Suivi d'un paiement par le client (propriétaire uniquement)
+    Route::get('/paiements/{reference}/statut',   [PaiementBusController::class, 'statut'])->middleware('throttle:60,1');
+    Route::post('/paiements/{reference}/annuler', [PaiementBusController::class, 'annuler'])->middleware('throttle:20,1');
 
     // Scan & embarquement
     Route::post('/scan-ticket',         [TicketAdminController::class, 'scan']);

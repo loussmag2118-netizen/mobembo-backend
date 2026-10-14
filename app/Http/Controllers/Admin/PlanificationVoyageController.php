@@ -8,6 +8,8 @@ use App\Models\Trajet;
 use App\Models\Bus;
 use App\Models\VagueDepart;
 use App\Models\Agence;
+use App\Services\ReservationService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,8 +40,11 @@ class PlanificationVoyageController extends Controller
      * ⭐ API : Liste des planifications pour Flutter (JSON).
      * GET /api/planifications
      */
-    public function apiIndex(Request $request)
+    public function apiIndex(Request $request, ReservationService $reservations)
     {
+        // Libère les réservations non payées dont le délai est dépassé
+        $reservations->expirerReservations();
+
         $agenceNom = $request->query('agence');
 
         $query = PlanificationVoyage::with([
@@ -90,6 +95,10 @@ class PlanificationVoyageController extends Controller
                         'nom'   => $p->trajet->gareArrivee->nom_gare,
                         'ville' => $p->trajet->gareArrivee->ville,
                     ] : null,
+                    // Informations facultatives saisies par l'agence
+                    'duree_minutes'     => $p->trajet->duree_minutes,
+                    'bagages_autorises' => $p->trajet->bagages_autorises,
+                    'conditions_voyage' => $p->trajet->conditions_voyage,
                 ] : null,
                 'bus' => $p->bus ? [
                     'id'              => $p->bus->id,
@@ -339,19 +348,23 @@ class PlanificationVoyageController extends Controller
             ? (int) $request->nombre_tickets_total 
             : ($planificationVoyage->nombre_tickets_total ?? $capaciteBus);
 
-        $placesVendues = $planificationVoyage->tickets()->count();
-        $placesDisponibles = max(0, $nombreTicketsTotal - $placesVendues);
+        // Places restantes recalculées à partir des tickets qui occupent
+        // réellement une place (payés ou réservés non expirés)
+        DB::transaction(function () use ($request, $planificationVoyage, $nombreTicketsTotal) {
+            $voyage = PlanificationVoyage::whereKey($planificationVoyage->id)->lockForUpdate()->first();
 
-        $planificationVoyage->update([
-            'trajet_id'            => $request->trajet_id,
-            'bus_id'               => $request->bus_id,
-            'vague_depart_id'      => $request->vague_depart_id,
-            'date_voyage'          => $request->date_voyage,
-            'nombre_tickets_total' => $nombreTicketsTotal,
-            'places_disponibles'   => $placesDisponibles,
-            'prix'                 => $request->prix, // 👈 Mise à jour du prix
-            'statut_voyage'        => $request->statut_voyage,
-        ]);
+            $voyage->update([
+                'trajet_id'            => $request->trajet_id,
+                'bus_id'               => $request->bus_id,
+                'vague_depart_id'      => $request->vague_depart_id,
+                'date_voyage'          => $request->date_voyage,
+                'nombre_tickets_total' => $nombreTicketsTotal,
+                'prix'                 => $request->prix, // 👈 Mise à jour du prix
+                'statut_voyage'        => $request->statut_voyage,
+            ]);
+
+            app(ReservationService::class)->recalculerPlaces($voyage->fresh());
+        });
 
         return redirect()
             ->route('admin.planifications.index')

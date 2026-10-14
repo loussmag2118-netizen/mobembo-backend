@@ -15,6 +15,10 @@ class Trajet extends Model
         'ville_arrivee',
         'gare_arrivee_id',
         'bus_id',        // ⭐ NOUVEAU
+        // Informations au client (facultatives)
+        'duree_minutes',
+        'bagages_autorises',
+        'conditions_voyage',
         // 'prix' retiré — le prix se définit dans les planifications
     ];
 

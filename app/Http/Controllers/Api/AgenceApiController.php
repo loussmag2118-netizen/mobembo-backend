@@ -18,19 +18,11 @@ class AgenceApiController extends Controller
             ->orderBy('nom_agence')
             ->get()
             ->map(function ($a) {
-                // Cartographie des logos vers les assets mobiles connus
-                $logos = [
-                    'Océan du Nord'   => 'assets/images/oceandunord.png',
-                    'Nzoko Transport' => 'assets/images/Nzoko.jpg',
-                    'Stelimac'        => 'assets/images/Stelimac.jpg',
-                    'Transbony'       => 'assets/images/transbony.png',
-                ];
-
                 return [
                     'id'               => $a->id,
                     'nom'              => $a->nom_agence,
                     'nom_agence'       => $a->nom_agence,
-                    'logo'             => $logos[$a->nom_agence] ?? 'assets/images/Logo.png',
+                    'logo'             => $a->logo_app,
                     'date_partenariat' => $a->date_partenariat,
                     'statut'           => $a->statut,
                 ];

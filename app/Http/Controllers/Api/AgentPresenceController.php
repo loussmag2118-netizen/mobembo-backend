@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
+use App\Services\PaiementService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -40,9 +42,9 @@ class AgentPresenceController extends Controller
             ], 422);
         }
 
-        $agent = Auth::user();
+        $agent = $this->agentAutorise();
 
-        if (!$agent || !$agent->agence_id) {
+        if (!$agent) {
             return response()->json([
                 'message' => 'Utilisateur non autorisé ou sans agence assignée.',
             ], 403);
@@ -77,13 +79,30 @@ class AgentPresenceController extends Controller
         }
 
         // ============================================================
-        // 4. MISE À JOUR DU STATUT
+        // 4. 🔒 UN BILLET NON PAYÉ NE PEUT PAS EMBARQUER
+        // ============================================================
+        if ($request->present && ($motif = $this->motifRefus($ticket))) {
+            $this->journaliser($ticket, $agent, $motif['code'], $ticket->reference_ticket);
+
+            return response()->json([
+                'message' => $motif['message'],
+                'code'    => $motif['code'],
+            ], 409);
+        }
+
+        $dejaPresent = $ticket->statut_embarquement === 'Present';
+
+        // ============================================================
+        // 5. MISE À JOUR DU STATUT
         // ============================================================
         $nouveauStatut = $request->present ? 'Present' : 'Absent';
 
         $ticket->statut_embarquement = $nouveauStatut;
         $ticket->agent_controleur_id = $agent->id;   // traçabilité : qui a scanné
         $ticket->save();
+
+        $this->journaliser($ticket, $agent,
+            $request->present ? ($dejaPresent ? 'DEJA_UTILISE' : 'VALIDE') : 'ABSENT', $ticket->reference_ticket);
 
         return response()->json([
             'success'             => true,
@@ -94,6 +113,7 @@ class AgentPresenceController extends Controller
             'reference_ticket'    => $ticket->reference_ticket,
             'statut_embarquement' => $ticket->statut_embarquement,
             'agent_controleur_id' => $ticket->agent_controleur_id,
+            'deja_present'        => $dejaPresent,
             'updated_at'          => $ticket->updated_at,
         ], 200);
     }
@@ -105,15 +125,18 @@ class AgentPresenceController extends Controller
      */
     public function showByReference($reference)
     {
-        $agent = Auth::user();
+        $agent = $this->agentAutorise();
+        $code  = trim((string) $reference);
+        // Nouveau QR : « MBL:<jeton> » ; ancien QR / saisie : référence du billet
+        $jeton = str_starts_with($code, 'MBL:') ? substr($code, 4) : null;
 
-        if (!$agent || !$agent->agence_id) {
+        if (!$agent) {
             return response()->json([
                 'message' => 'Utilisateur non autorisé.',
             ], 403);
         }
 
-        $ticket = Ticket::where('reference_ticket', $reference)
+        $ticket = Ticket::where($jeton !== null ? 'qr_code_token' : 'reference_ticket', $jeton ?? $code)
             ->where('agence_id', $agent->agence_id)   // 🔒 étanchéité
             ->with([
                 'agence',
@@ -128,10 +151,14 @@ class AgentPresenceController extends Controller
             ->first();
 
         if (!$ticket) {
+            $this->journaliser(null, $agent, 'INTROUVABLE', mb_substr($code, 0, 120));
+
             return response()->json([
                 'message' => 'Ticket introuvable pour votre agence.',
             ], 404);
         }
+
+        $motif = $this->motifRefus($ticket);
 
         $voyage      = $ticket->planificationVoyage;
         $trajet      = $voyage->trajet ?? null;
@@ -181,7 +208,66 @@ class AgentPresenceController extends Controller
                     ? trim(($controleur->prenom ?? '') . ' ' . ($controleur->nom ?? ''))
                     : null,
                 'statut_embarquement' => $ticket->statut_embarquement,
+
+                // Contrôle
+                'valide_pour_embarquement' => $motif === null,
+                'motif_refus'              => $motif['message'] ?? null,
+                'code_refus'               => $motif['code'] ?? null,
+                'billet_test'              => PaiementService::estReferenceTest($ticket->reference_paiement),
             ],
         ], 200);
+    }
+
+    // ==================================================================
+
+    /** Agent ou admin d'une agence ; sinon null. */
+    private function agentAutorise()
+    {
+        $agent = Auth::user();
+
+        return ($agent && $agent->agence_id && in_array($agent->role, ['Agent', 'Admin'], true)) ? $agent : null;
+    }
+
+    /**
+     * Raison pour laquelle le billet ne permet pas d'embarquer, ou null.
+     *
+     * @return array{code: string, message: string}|null
+     */
+    private function motifRefus(Ticket $ticket): ?array
+    {
+        if ($ticket->statut_paiement !== 'Paye') {
+            return [
+                'code'    => 'NON_PAYE',
+                'message' => match ($ticket->statut_paiement) {
+                    'En_Attente' => 'Billet non payé (paiement en attente) : embarquement refusé.',
+                    'Rembourse'  => 'Billet remboursé : embarquement refusé.',
+                    default      => 'Billet non valable (paiement échoué) : embarquement refusé.',
+                },
+            ];
+        }
+
+        if (PaiementService::estReferenceTest($ticket->reference_paiement)
+            && app()->environment('production') && ! config('paiement.mode_test_production')) {
+            return ['code' => 'BILLET_TEST', 'message' => "Billet de TEST : il n'est pas valable pour voyager."];
+        }
+
+        return null;
+    }
+
+    /** Trace chaque contrôle (accepté ou refusé) dans ticket_validations. */
+    private function journaliser(?Ticket $ticket, $agent, string $resultat, ?string $codeScanne): void
+    {
+        try {
+            DB::table('ticket_validations')->insert([
+                'ticket_id'   => $ticket?->id,
+                'agent_id'    => $agent?->id,
+                'agence_id'   => $agent?->agence_id,
+                'resultat'    => $resultat,
+                'code_scanne' => $codeScanne,
+                'created_at'  => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Contrôle de billet non journalisé : ' . $e->getMessage());
+        }
     }
 }

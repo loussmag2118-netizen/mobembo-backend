@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlanificationVoyage;
 use App\Models\Ticket;
+use App\Services\ReservationService;
+use Illuminate\Support\Facades\DB;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -47,7 +51,8 @@ class VoyageurController extends Controller
                 'nom_trajet'         => $nomTrajet,
                 'date_voyage'        => $dateVoyage,
                 'statut_embarquement'=> $ticket->statut_embarquement,
-                'envoye_aux_agents'  => true, // Déjà accessible au scan des agents de l'agence
+                'statut_paiement'    => $ticket->statut_paiement,
+                'billet_test'        => \App\Services\PaiementService::estReferenceTest($ticket->reference_paiement),
             ];
         });
 
@@ -65,15 +70,57 @@ class VoyageurController extends Controller
             ->where('agence_id', $agenceId)
             ->firstOrFail();
 
-        // Réincrémente la place sur la planification
-        if ($ticket->planificationVoyage) {
-            $ticket->planificationVoyage->increment('places_disponibles');
-        }
+        // Supprime le billet puis recalcule les places du départ
+        // (une place n'est rendue que si le billet en occupait une)
+        DB::transaction(function () use ($ticket) {
+            $voyage = $ticket->planification_voyage_id
+                ? PlanificationVoyage::whereKey($ticket->planification_voyage_id)->lockForUpdate()->first()
+                : null;
 
-        $ticket->delete();
+            $ticket->delete();
+
+            if ($voyage) {
+                app(ReservationService::class)->recalculerPlaces($voyage);
+            }
+        });
 
         return redirect()
             ->route('admin.voyageurs.index')
             ->with('success', 'Le voyageur et son billet ont été supprimés avec succès.');
+    }
+
+    /**
+     * Marque un billet payé comme remboursé (après remboursement effectif
+     * du client) : la place est libérée et l'opération est journalisée.
+     */
+    public function rembourser($id)
+    {
+        $agenceId = Auth::user()->agence_id;
+
+        $ticket = Ticket::where('id', $id)
+            ->where('agence_id', $agenceId)
+            ->where('statut_paiement', 'Paye')
+            ->firstOrFail();
+
+        DB::transaction(function () use ($ticket) {
+            $voyage = $ticket->planification_voyage_id
+                ? PlanificationVoyage::whereKey($ticket->planification_voyage_id)->lockForUpdate()->first()
+                : null;
+
+            $ticket->update(['statut_paiement' => 'Rembourse']);
+
+            if ($voyage) {
+                app(ReservationService::class)->recalculerPlaces($voyage);
+            }
+        });
+
+        Audit::log('billet.rembourse', $ticket, [
+            'reference' => $ticket->reference_ticket,
+            'montant'   => (float) $ticket->montant_total,
+        ]);
+
+        return redirect()
+            ->route('admin.voyageurs.index')
+            ->with('success', 'Billet marqué comme remboursé. La place a été libérée.');
     }
 }

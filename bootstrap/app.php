@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // ⭐ Alias des middlewares personnalisés
         $middleware->alias([
             'agence.active' => \App\Http\Middleware\CheckAgenceActive::class,
+            'role'          => \App\Http\Middleware\EnsureRole::class,
         ]);
 
         // ⭐ Redirection des invités (non connectés) → page /login unifiée

@@ -52,9 +52,10 @@ use App\Http\Controllers\Auth\UnifiedLoginController;
 // ================================================================
 // RACINE
 // ================================================================
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+// La page d'accueil du site est le formulaire de connexion de l'administration
+// (au lieu de la page par défaut de Laravel).
+Route::get('/', [UnifiedLoginController::class, 'showLoginForm'])
+    ->name('home');
 
 // ================================================================
 // 🔐 CONNEXION UNIFIÉE — Une seule page pour tous les admins

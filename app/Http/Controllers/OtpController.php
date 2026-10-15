@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Utilisateur;
 use App\Services\TwilioVerifyService;
+use App\Support\JetonReinitialisation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -47,6 +48,7 @@ class OtpController extends Controller
         $validator = Validator::make($request->all(), [
             'telephone'  => 'required|string|size:9',
             'type_usage' => 'nullable|in:INSCRIPTION,RESET_PASSWORD',
+            'canal'      => 'nullable|in:sms,call',   // call : code dicté par appel vocal
         ]);
 
         if ($validator->fails()) {
@@ -56,10 +58,11 @@ class OtpController extends Controller
             ], 422);
         }
 
+        $canal         = $request->input('canal', 'sms');
         $telephoneE164 = $this->normalizePhone($request->telephone);
         $typeUsage     = $request->input('type_usage', 'INSCRIPTION');
 
-        $result = $this->twilioVerify->sendCode($telephoneE164);
+        $result = $this->twilioVerify->sendCode($telephoneE164, $canal);
 
         if (!$result['success']) {
             Log::warning('Twilio KO pour ' . $request->telephone . ' : ' . ($result['message'] ?? ''));
@@ -67,7 +70,9 @@ class OtpController extends Controller
             // En production : jamais de code dans la réponse
             if (! $this->modeDevAutorise()) {
                 return response()->json([
-                    'message' => "Impossible d'envoyer le SMS de vérification pour le moment. Réessayez dans quelques instants.",
+                    'message' => $canal === 'call'
+                        ? "Impossible de vous appeler pour le moment. Réessayez dans quelques instants."
+                        : "Impossible d'envoyer le SMS de vérification pour le moment. Réessayez dans quelques instants.",
                 ], 503);
             }
 
@@ -88,8 +93,9 @@ class OtpController extends Controller
         }
 
         return response()->json([
-            'message' => 'Code OTP envoyé avec succès par SMS',
+            'message' => $canal === 'call' ? 'Vous allez recevoir un appel avec votre code.' : 'Code OTP envoyé avec succès par SMS',
             'status'  => $result['status'],
+            'canal'   => $canal,
         ], 200);
     }
 
@@ -164,12 +170,26 @@ class OtpController extends Controller
 
         // Marque le compte comme confirmé si inscription
         if ($typeUsage === 'INSCRIPTION') {
-            Utilisateur::where('telephone', $request->telephone)
-                ->update(['compte_confirme' => true]);
+            $user = Utilisateur::where('telephone', $request->telephone)->first();
+            if (! $user) {
+                return response()->json(['message' => 'Code validé avec succès.'], 200);
+            }
+            $user->update(['compte_confirme' => true]);
+
+            // Numéro confirmé : le client est connecté directement
+            $user->tokens()->delete();
+
+            return response()->json([
+                'message' => 'Code validé avec succès.',
+                'token'   => $user->createToken('mobembo_token')->plainTextToken,
+                'user'    => $user->only(['id', 'nom', 'prenom', 'telephone', 'role']),
+            ], 200);
         }
 
+        // Réinitialisation : preuve à présenter pour changer le mot de passe
         return response()->json([
             'message' => 'Code validé avec succès.',
+            'jeton_reinitialisation' => JetonReinitialisation::emettre($request->telephone),
         ], 200);
     }
 }

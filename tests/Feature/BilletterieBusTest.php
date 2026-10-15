@@ -99,6 +99,29 @@ class BilletterieBusTest extends TestCase
         $this->assertSame('En_Attente', Ticket::value('statut_paiement'));
     }
 
+    public function test_la_demande_mtn_est_au_format_attendu_par_mtn(): void
+    {
+        $this->mtnReel('PENDING');
+        $depart = $this->creerDepart();
+        Sanctum::actingAs($this->client());
+
+        $this->payerMtn($depart->id)->assertOk();
+
+        Http::assertSent(function ($requete) {
+            if (! str_ends_with($requete->url(), 'requesttopay')) {
+                return false;
+            }
+            $corps = $requete->data();
+
+            return $corps['payer']['partyId'] === '242061234567'          // indicatif du Congo
+                && str_starts_with($corps['externalId'], 'MOBEMBO-')        // plateforme identifiable
+                && $corps['payerMessage'] === 'Mobembo Line'
+                && str_contains($corps['payeeNote'], 'Mobembo Line')
+                && $corps['currency'] === 'XAF';
+        });
+        $this->assertStringStartsWith('MOBEMBO-', DB::table('paiements_mtn_momo')->value('external_id'));
+    }
+
     public function test_paiement_confirme_par_mtn_rend_les_billets_valables(): void
     {
         $this->mtnReel('PENDING');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Utilisateur;
+use App\Support\JetonReinitialisation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -10,6 +11,9 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /** Date à partir de laquelle un client doit confirmer son numéro avant de se connecter. */
+    public const CONFIRMATION_OBLIGATOIRE_DEPUIS = '2026-10-15 00:00:00';
+
     /**
      * Inscription d'un nouvel utilisateur (Client, Admin, Agent).
      *
@@ -20,14 +24,20 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        // L'inscription publique crée uniquement des comptes clients : les
+        // administrateurs et agents sont créés depuis l'administration.
         $validator = Validator::make($request->all(), [
             'nom' => 'required|string|max:255',
             'prenom' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:utilisateurs,email',
-            'telephone' => 'required|string|size:9|unique:utilisateurs,telephone',
-            'mot_de_passe' => 'required|string|min:6',
-            'role' => 'nullable|in:Client,Admin,Agent',
-            'agence_id' => 'nullable|exists:agences,id',
+            'email' => 'nullable|email',
+            'telephone' => ['required', 'string', 'regex:/^0[4-6]\d{7}$/'],
+            'mot_de_passe' => 'required|string|min:8',
+            // Les nouvelles versions de l'application envoient la confirmation
+            'mot_de_passe_confirmation' => 'sometimes|same:mot_de_passe',
+        ], [
+            'telephone.regex' => 'Le numéro doit contenir 9 chiffres et commencer par 04, 05 ou 06.',
+            'mot_de_passe.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'mot_de_passe_confirmation.same' => 'Les mots de passe ne correspondent pas.',
         ]);
 
         if ($validator->fails()) {
@@ -37,24 +47,37 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = Utilisateur::create([
+        // Numéro déjà pris par un compte confirmé (ou du personnel) : refusé.
+        // Compte client jamais confirmé (code non saisi) : la nouvelle
+        // inscription le remplace, le numéro n'est pas bloqué.
+        $existant = Utilisateur::where('telephone', $request->telephone)->first();
+        if ($existant && ($existant->compte_confirme || $existant->role !== 'Client')) {
+            return response()->json(['message' => 'Ce numéro de téléphone est déjà utilisé.'], 422);
+        }
+        if ($request->filled('email') && Utilisateur::where('email', $request->email)->when($existant, fn ($q) => $q->whereKeyNot($existant->id))->exists()) {
+            return response()->json(['message' => 'Cette adresse e-mail est déjà utilisée.'], 422);
+        }
+
+        $donnees = [
             'nom' => $request->nom,
             'prenom' => $request->prenom,
             'email' => $request->email,
-            'telephone' => $request->telephone,
             'mot_de_passe' => Hash::make($request->mot_de_passe),
-            'role' => $request->role ?? 'Client',
-            'agence_id' => $request->agence_id,
-            'compte_confirme' => false,
-            'statut' => 'actif',
-        ]);
+        ];
+        $user = $existant
+            ? tap($existant)->update($donnees)
+            : Utilisateur::create($donnees + [
+                'telephone' => $request->telephone,
+                'role' => 'Client',
+                'agence_id' => null,
+                'compte_confirme' => false,
+                'statut' => 'actif',
+            ]);
 
-        $token = $user->createToken('mobembo_token')->plainTextToken;
-
+        // Pas de jeton de connexion tant que le numéro n'est pas confirmé
         return response()->json([
-            'message' => 'Inscription réussie',
-            'user' => $user->load('agence'),
-            'token' => $token,
+            'message' => 'Inscription enregistrée. Confirmez votre numéro avec le code reçu.',
+            'user' => $user->only(['id', 'nom', 'prenom', 'telephone', 'role']),
         ], 201);
     }
 
@@ -93,6 +116,17 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Client inscrit sans avoir saisi le code reçu : le numéro doit être
+        // confirmé avant la première connexion (comptes créés depuis la mise
+        // en place de cette règle ; les anciens comptes ne sont pas bloqués).
+        if ($user->role === 'Client' && ! $user->compte_confirme
+            && $user->created_at && $user->created_at->gte(self::CONFIRMATION_OBLIGATOIRE_DEPUIS)) {
+            return response()->json([
+                'message' => 'Votre numéro n\'est pas encore confirmé. Saisissez le code reçu pour activer votre compte.',
+                'code' => 'COMPTE_NON_CONFIRME',
+            ], 403);
+        }
+
         // Suppression des anciens tokens pour éviter l'accumulation
         $user->tokens()->delete();
 
@@ -110,9 +144,18 @@ class AuthController extends Controller
      */
     public function resetPassword(Request $request)
     {
+        // Ancienne version de l'application : « mot_de_passe »
+        if (! $request->filled('nouveau_mot_de_passe') && $request->filled('mot_de_passe')) {
+            $request->merge(['nouveau_mot_de_passe' => $request->mot_de_passe]);
+        }
+
         $validator = Validator::make($request->all(), [
-            'telephone' => 'required|string|exists:utilisateurs,telephone',
-            'nouveau_mot_de_passe' => 'required|string|min:6',
+            'telephone' => 'required|string',
+            'jeton' => 'required|string',
+            'nouveau_mot_de_passe' => 'required|string|min:8',
+        ], [
+            'jeton.required' => 'Vérifiez d\'abord votre numéro avec le code reçu.',
+            'nouveau_mot_de_passe.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
         ]);
 
         if ($validator->fails()) {
@@ -122,7 +165,17 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // Preuve que le numéro a reçu le code (vérification OTP « RESET_PASSWORD »)
+        if (! JetonReinitialisation::consommer($request->telephone, $request->jeton)) {
+            return response()->json([
+                'message' => 'Votre vérification a expiré. Recommencez avec un nouveau code.',
+            ], 403);
+        }
+
         $user = Utilisateur::where('telephone', $request->telephone)->first();
+        if (! $user) {
+            return response()->json(['message' => 'Aucun compte trouvé avec ce numéro.'], 404);
+        }
         
         $user->update([
             'mot_de_passe' => Hash::make($request->nouveau_mot_de_passe),

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CanadianUser;
+use App\Support\JetonReinitialisation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -133,8 +134,10 @@ class CanadianAuthController extends Controller
         $validator = Validator::make($request->all(), [
             // ⭐ REGEX : 9 chiffres, commence par 06, 04 ou 05
             'telephone'            => ['required', 'string', 'regex:/^(06|04|05)\d{7}$/', 'exists:canadian_users,telephone'],
+            'jeton'                => 'required|string',
             'nouveau_mot_de_passe' => 'required|string|min:6',
         ], [
+            'jeton.required'                => 'Vérifiez d\'abord votre numéro avec le code reçu.',
             'telephone.required'            => 'Le numéro de téléphone est obligatoire.',
             'telephone.regex'               => 'Le numéro doit commencer par 06, 04 ou 05 et contenir 9 chiffres.',
             'telephone.exists'              => 'Aucun compte trouvé avec ce numéro.',
@@ -147,6 +150,13 @@ class CanadianAuthController extends Controller
                 'message' => $validator->errors()->first(),
                 'errors'  => $validator->errors(),
             ], 422);
+        }
+
+        // Preuve que le numéro a reçu le code (vérification OTP « RESET_PASSWORD »)
+        if (! JetonReinitialisation::consommer($request->telephone, $request->jeton)) {
+            return response()->json([
+                'message' => 'Votre vérification a expiré. Recommencez avec un nouveau code.',
+            ], 403);
         }
 
         $user = CanadianUser::where('telephone', $request->telephone)->first();

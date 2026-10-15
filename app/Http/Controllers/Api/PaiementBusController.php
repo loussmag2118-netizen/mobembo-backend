@@ -140,7 +140,7 @@ class PaiementBusController extends Controller
             }
 
             $reference  = $operateur === PaiementService::MTN ? (string) Str::uuid() : 'AIRTEL-' . strtoupper((string) Str::uuid());
-            $externalId = 'MBL-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
+            $externalId = PaiementService::externalIdMtn();
 
             // Les places sont bloquées AVANT la demande de paiement
             $tickets = $this->reservations->reserver(

@@ -111,6 +111,24 @@ class PaiementService
         return null;
     }
 
+    /** Numéro au format attendu par MTN : « 242 » + 9 chiffres (ex. 242061234567). */
+    public static function msisdnCongo(string $telephone): string
+    {
+        $chiffres = preg_replace('/\D/', '', $telephone);
+
+        return str_starts_with($chiffres, '242') ? $chiffres : '242' . $chiffres;
+    }
+
+    /**
+     * Identifiant de la transaction chez MTN, propre à la plateforme : le
+     * compte MTN est partagé entre plusieurs plateformes, le préfixe
+     * « MOBEMBO- » permet de retrouver et rapprocher les paiements Mobembo.
+     */
+    public static function externalIdMtn(): string
+    {
+        return 'MOBEMBO-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
+    }
+
     public function demanderMtn(string $jeton, string $reference, string $externalId, float $montant, string $telephone): Response
     {
         $entetes = [
@@ -128,9 +146,10 @@ class PaiementService
             'amount'       => (string) (int) round($montant),
             'currency'     => 'XAF',
             'externalId'   => $externalId,
-            'payer'        => ['partyIdType' => 'MSISDN', 'partyId' => $telephone],
+            'payer'        => ['partyIdType' => 'MSISDN', 'partyId' => self::msisdnCongo($telephone)],
+            // Nom de la plateforme sur chaque transaction (suivi et rapprochement)
             'payerMessage' => 'Mobembo Line',
-            'payeeNote'    => 'Paiement de billet Mobembo Line',
+            'payeeNote'    => 'Mobembo Line - billet de bus ' . $externalId,
         ]);
     }
 

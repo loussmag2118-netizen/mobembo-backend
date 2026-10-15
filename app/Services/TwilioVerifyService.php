@@ -29,7 +29,11 @@ class TwilioVerifyService
         }
     }
 
-    public function sendCode(string $phoneNumber): array
+    /**
+     * Envoie le code par SMS ou, si les SMS n'arrivent pas (ex. réseau Airtel
+     * qui filtre les SMS venant de l'étranger), par appel vocal ($canal = 'call').
+     */
+    public function sendCode(string $phoneNumber, string $canal = 'sms'): array
     {
         if (!$this->client || !$this->verifySid) {
             return [
@@ -40,7 +44,7 @@ class TwilioVerifyService
 
         try {
             try {
-                $verification = $this->creerVerification($phoneNumber, $this->optionsSms());
+                $verification = $this->creerVerification($phoneNumber, $this->optionsSms(), $canal);
             } catch (TwilioException $e) {
                 // Option refusée par le compte Twilio (ex. 60204 « Custom friendly
                 // name not allowed ») : on renvoie le code sans personnalisation
@@ -49,7 +53,7 @@ class TwilioVerifyService
                     throw $e;
                 }
                 Log::warning('Twilio : personnalisation du SMS refusée, envoi standard', ['code' => $e->getCode(), 'message' => $e->getMessage()]);
-                $verification = $this->creerVerification($phoneNumber, []);
+                $verification = $this->creerVerification($phoneNumber, [], $canal);
             }
 
             return [
@@ -78,12 +82,12 @@ class TwilioVerifyService
         }
     }
 
-    private function creerVerification(string $phoneNumber, array $options)
+    private function creerVerification(string $phoneNumber, array $options, string $canal = 'sms')
     {
         return $this->client->verify->v2
             ->services($this->verifySid)
             ->verifications
-            ->create($phoneNumber, 'sms', $options);
+            ->create($phoneNumber, $canal, $options);
     }
 
     /**

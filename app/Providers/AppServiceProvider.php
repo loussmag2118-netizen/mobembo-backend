@@ -9,6 +9,7 @@ use App\Models\Trajet;
 use App\Models\Utilisateur;
 use App\Models\VagueDepart;
 use App\Observers\AuditObserver;
+use App\Support\UrlPublique;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
@@ -31,6 +32,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configurerLimitesDeTentatives();
+
+        // Production : adresses générées avec le domaine public (APP_URL)
+        if ($this->app->environment('production')) {
+            UrlPublique::appliquer(config('app.url'));
+        }
 
         // Pagination de l'administration (5 éléments par page)
         Paginator::defaultView('partials.pagination');

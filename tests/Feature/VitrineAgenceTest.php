@@ -123,4 +123,20 @@ class VitrineAgenceTest extends TestCase
         Sanctum::actingAs($this->personnel('Agent', $depart->agence_id));
         $this->getJson('/api/agent/ticket/' . rawurlencode('MBL:' . $ticket->qr_code_token))->assertOk();
     }
+
+    public function test_en_production_les_qr_et_images_utilisent_le_domaine_public(): void
+    {
+        $depart = $this->creerDepart();
+        $ticket = app(ReservationService::class)
+            ->reserver($depart->id, [['nom' => 'A']], 'MTN', 'R-DOM', payeImmediatement: true)
+            ->first();
+        $media = Media::create(['agence_id' => $depart->agence_id, 'type' => 'logo', 'mime' => 'image/png', 'taille' => 3, 'contenu' => 'abc']);
+
+        // Requête arrivée par l'adresse Cloud Run (ancienne version de l'application)
+        $this->app['url']->useOrigin('https://mobembo-api-201948042973.us-east1.run.app');
+        \App\Support\UrlPublique::appliquer('https://mobembo-line.site');
+
+        $this->assertStringStartsWith('https://mobembo-line.site/billet/', $ticket->urlPublique());
+        $this->assertStringStartsWith('https://mobembo-line.site/medias/', $media->url());
+    }
 }

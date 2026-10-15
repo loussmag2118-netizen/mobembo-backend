@@ -144,6 +144,11 @@
                 </tbody>
             </table>
         </div>
+        @if(method_exists($voyageurs, 'links') && $voyageurs->hasPages())
+            <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                {{ $voyageurs->links() }}
+            </div>
+        @endif
     </div>
 
 </div>

@@ -92,7 +92,7 @@
                         @click="filterStatut = 'all'" 
                         :class="filterStatut === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
                         class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
-                    Tous ({{ $planifications->count() }})
+                    Tous ({{ $planifications->total() }})
                 </button>
                 <button type="button" 
                         @click="filterStatut = 'Programmation'" 

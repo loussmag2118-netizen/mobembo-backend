@@ -22,9 +22,16 @@ class VilleController extends Controller
                 $q->select(DB::raw('COUNT(DISTINCT agence_id)'));
             }])
             ->orderBy('nom')
-            ->get();
+            ->paginate(5)->withQueryString();
 
-        return view('superadmin.villes.index', compact('villes'));
+        // Chiffres de toutes les villes (pas seulement de la page)
+        $stats = [
+            'villes'  => VilleTerrestre::count(),
+            'actives' => VilleTerrestre::where('actif', true)->count(),
+            'gares'   => \App\Models\Gare::whereIn('ville_id', VilleTerrestre::select('id'))->count(),
+        ];
+
+        return view('superadmin.villes.index', compact('villes', 'stats'));
     }
 
     public function store(Request $request)

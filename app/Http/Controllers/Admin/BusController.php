@@ -17,9 +17,13 @@ class BusController extends Controller
     {
         $bus = Bus::where('agence_id', Auth::user()->agence_id)
             ->orderByDesc('id')
-            ->paginate(15);
+            ->paginate(5)->withQueryString();
 
-        return view('admin.bus.index', compact('bus'));
+        // Chiffres de toute la flotte (pas seulement de la page)
+        $parStatut = Bus::where('agence_id', Auth::user()->agence_id)
+            ->selectRaw('statut, COUNT(*) AS n')->groupBy('statut')->pluck('n', 'statut');
+
+        return view('admin.bus.index', compact('bus', 'parStatut'));
     }
 
     /**
@@ -30,7 +34,7 @@ class BusController extends Controller
         $bus = Bus::onlyTrashed()
             ->where('agence_id', Auth::user()->agence_id)
             ->orderByDesc('deleted_at')
-            ->paginate(15);
+            ->paginate(5)->withQueryString();
 
         return view('admin.bus.trashed', compact('bus'));
     }

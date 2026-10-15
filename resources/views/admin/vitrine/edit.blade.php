@@ -3,14 +3,15 @@
 @section('title', "Vitrine de l'agence")
 @section('header_icon', 'fa-store')
 @section('header_title', "Vitrine de l'agence")
-@section('header_subtitle', "Logo, photos, slogan et couleur de votre page d'accueil dans l'application")
+@section('header_subtitle', "Logo, photos, slogan et couleurs de votre agence, dans l'application et dans votre administration")
 
 @section('content')
 @php
     $couleur = old('couleur', $agence->couleur ?? '#1B5E20');
+    $couleur2 = old('couleur_secondaire', $agence->couleur_secondaire ?? '#F9A825');
     $photos = $agence->photos;
 @endphp
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6" x-data="{ couleur: '{{ $couleur }}', slogan: @js(old('slogan', $agence->slogan ?? '')) }">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6" x-data="{ couleur: '{{ $couleur }}', couleur2: '{{ $couleur2 }}', slogan: @js(old('slogan', $agence->slogan ?? '')) }">
 
     <div class="xl:col-span-2 space-y-6">
         @if($errors->any())
@@ -79,20 +80,14 @@
         <form action="{{ route('admin.vitrine.update') }}" method="POST" class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
             @csrf
             @method('PUT')
-            <h2 class="text-lg font-black text-slate-900">Slogan et couleur</h2>
+            <h2 class="text-lg font-black text-slate-900">Slogan et couleurs</h2>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Slogan</label>
                 <input name="slogan" maxlength="160" x-model="slogan" placeholder="Ex. La route en toute confiance."
                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold">
             </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Couleur principale</label>
-                <div class="flex items-center gap-3">
-                    <input type="color" x-model="couleur" class="w-14 h-12 rounded-xl border border-slate-200 cursor-pointer">
-                    <input name="couleur" x-model="couleur" maxlength="7" class="w-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold uppercase">
-                    <span class="text-xs text-slate-500 font-semibold">Boutons, titres et icônes de votre page.</span>
-                </div>
-            </div>
+            @include('partials.choix-couleurs')
+            <p class="text-xs text-slate-500 font-semibold">Votre administration et votre page dans l'application prennent ces couleurs.</p>
             <button class="px-5 py-2.5 rounded-xl bg-[#124231] text-white text-sm font-bold hover:bg-[#0c2f23]">Enregistrer</button>
         </form>
     </div>
@@ -102,7 +97,7 @@
         <div class="xl:sticky xl:top-28">
             <p class="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Aperçu dans l'application</p>
             <div class="mx-auto w-[280px] rounded-[2.2rem] border-[10px] border-slate-900 bg-[#F7F8FA] overflow-hidden shadow-xl">
-                <div class="h-40 relative" :style="'background:' + couleur">
+                <div class="h-40 relative" :style="'background: linear-gradient(135deg, ' + couleur + ', ' + couleur2 + ')'">
                     @if($photos->first())
                         <img src="{{ $photos->first()->url() }}" class="absolute inset-0 w-full h-full object-cover">
                     @endif

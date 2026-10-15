@@ -11,6 +11,7 @@ use App\Models\VagueDepart;
 use App\Observers\AuditObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -30,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configurerLimitesDeTentatives();
+
+        // Pagination de l'administration (5 éléments par page)
+        Paginator::defaultView('partials.pagination');
 
         // Journal d'audit des créations / modifications / suppressions
         // faites depuis l'administration

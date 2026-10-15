@@ -10,7 +10,7 @@ class ExtraController extends Controller
 {
     public function index()
     {
-        $extras = Extra::orderBy('ordre')->paginate(20);
+        $extras = Extra::orderBy('ordre')->paginate(5)->withQueryString();
         return view('admin.canadian.extras.index', compact('extras'));
     }
 

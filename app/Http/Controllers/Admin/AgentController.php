@@ -20,7 +20,8 @@ class AgentController extends Controller
         $agents = Utilisateur::where('agence_id', Auth::user()->agence_id)
             ->where('role', 'Agent')
             ->with('gare') // Charger la gare associée pour l'affichage
-            ->get();
+            ->orderBy('nom')
+            ->paginate(5)->withQueryString();
 
         return view('admin.agents.index', compact('agents'));
     }
@@ -239,7 +240,7 @@ class AgentController extends Controller
                       ->orWhere('agent_controleur_id', $agent->id);
             })
             ->latest()
-            ->paginate(10);
+            ->paginate(5)->withQueryString();
 
         return view('admin.agents.historique', compact('agent', 'operations'));
     }

@@ -10,7 +10,7 @@ class ClasseTarifaireController extends Controller
 {
     public function index()
     {
-        $classes = ClasseTarifaire::orderBy('ordre')->paginate(20);
+        $classes = ClasseTarifaire::orderBy('ordre')->paginate(5)->withQueryString();
         return view('admin.canadian.classes.index', compact('classes'));
     }
 

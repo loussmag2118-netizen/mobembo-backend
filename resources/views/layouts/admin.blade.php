@@ -16,6 +16,10 @@
     $userInitiales = strtoupper(substr($user?->prenom ?? $user?->name ?? 'A', 0, 1) . substr($user?->nom ?? '', 0, 1));
     if (empty(trim($userInitiales))) $userInitiales = 'MB';
 
+    // Identité visuelle de l'agence (couleurs et logo) : administration d'agence seulement
+    $agenceCourante = (! $isSuperAdmin && ! $isCanadian) ? $user?->agence : null;
+    $identite = $agenceCourante?->identite();
+
     // Libellé du rôle affiché dans la barre latérale
     $roleLibelle = $isSuperAdmin ? 'Super administrateur'
         : ($isCanadian ? 'Administrateur' : (($user?->role ?? null) === 'Agent' ? 'Agent' : 'Administrateur'));
@@ -198,6 +202,30 @@
         }
 
         [x-cloak] { display: none !important; }
+
+        /* Couleurs de l'agence (vert Mobembo par défaut) */
+        :root {
+            --agence-primaire: {{ $identite['fond'] ?? '#124231' }};
+            --agence-primaire-fonce: {{ $identite['fonce'] ?? '#0c2f23' }};
+            --agence-secondaire: {{ $identite['secondaire'] ?? '#10B981' }};
+            --agence-accent: {{ $identite['accent'] ?? '#6EE7B7' }};
+            --agence-rvb: {{ $identite['fond_rvb'] ?? '18, 66, 49' }};
+        }
+        @if($identite)
+        .sidebar-active-gradient {
+            background: linear-gradient(135deg, var(--agence-primaire) 0%, var(--agence-primaire-fonce) 100%);
+            box-shadow: 0 4px 14px -2px rgba(var(--agence-rvb), 0.35);
+        }
+        .sidebar-active-gradient .text-emerald-300 { color: var(--agence-accent); }
+        .bg-\[\#124231\] { background-color: var(--agence-primaire) !important; }
+        .hover\:bg-\[\#0c2f23\]:hover { background-color: var(--agence-primaire-fonce) !important; }
+        .text-\[\#124231\] { color: var(--agence-primaire) !important; }
+        .focus\:ring-\[\#124231\]:focus { --tw-ring-color: var(--agence-primaire) !important; }
+        .carte-agence { background: linear-gradient(135deg, var(--agence-primaire), var(--agence-primaire-fonce)) !important; border-color: transparent !important; }
+        .carte-agence .text-emerald-300, .carte-agence .text-emerald-200\/80, .carte-agence .text-emerald-200\/70, .carte-agence .text-emerald-300\/80 { color: rgba(255, 255, 255, 0.82) !important; }
+        .carte-agence .bg-emerald-500\/20 { background-color: rgba(255, 255, 255, 0.16) !important; border-color: rgba(255, 255, 255, 0.25) !important; }
+        .carte-agence .bg-emerald-400, .carte-agence .bg-emerald-400\/20 { background-color: var(--agence-accent) !important; }
+        @endif
     </style>
 
     @stack('styles')
@@ -249,6 +277,9 @@
            }"
            class="fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-[#101924] border-r border-slate-200/80 dark:border-slate-800 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 ease-in-out">
         
+        @if($identite)
+            <div class="h-1.5 shrink-0" style="background: linear-gradient(90deg, {{ $identite['primaire'] }}, {{ $identite['secondaire'] }})"></div>
+        @endif
         <!-- En-tête Sidebar : Logo & Bouton Réduire / Agrandir -->
         <div class="h-24 px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-b from-slate-50/60 to-white dark:from-slate-900/60 dark:to-[#101924]"
              :class="sidebarCollapsed ? 'justify-center flex-col py-3' : 'px-5 justify-between'">
@@ -256,18 +287,31 @@
             <div class="flex items-center space-x-3.5 overflow-hidden">
                 <!-- Badge Logo avec ombre soignée -->
                 <div class="relative w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 p-1.5 shadow-sm flex items-center justify-center shrink-0">
-                    <img src="{{ asset('images/Logo.png') }}" alt="Mobembo Line" class="w-full h-full object-contain">
+                    @if(!empty($identite['logo']))
+                        <img src="{{ $identite['logo'] }}" alt="{{ $agenceNom }}" class="w-full h-full object-cover rounded-xl">
+                    @else
+                        <img src="{{ asset('images/Logo.png') }}" alt="Mobembo Line" class="w-full h-full object-contain">
+                    @endif
                     <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 ring-2 ring-emerald-400/30 animate-pulse"></span>
                 </div>
                 
                 <div x-show="!sidebarCollapsed" x-transition class="overflow-hidden">
-                    <div class="flex items-center gap-1.5">
-                        <span class="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">Mobembo</span>
-                    </div>
-                    <p class="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[145px] mt-0.5 flex items-center gap-1">
-                        <i class="fa-solid fa-building text-xs text-emerald-600 dark:text-emerald-400"></i>
-                        <span>{{ $agenceNom }}</span>
-                    </p>
+                    @if($identite)
+                        {{-- Administration d'agence : son nom en premier --}}
+                        <span class="block font-extrabold text-base text-slate-900 dark:text-white tracking-tight truncate max-w-[150px]">{{ $agenceNom }}</span>
+                        <p class="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[150px] mt-0.5 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full shrink-0" style="background: {{ $identite['secondaire'] }}"></span>
+                            <span>Mobembo Line</span>
+                        </p>
+                    @else
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">Mobembo</span>
+                        </div>
+                        <p class="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[145px] mt-0.5 flex items-center gap-1">
+                            <i class="fa-solid fa-building text-xs text-emerald-600 dark:text-emerald-400"></i>
+                            <span>{{ $agenceNom }}</span>
+                        </p>
+                    @endif
                 </div>
             </div>
 
@@ -649,7 +693,7 @@
 
             {{-- WIDGET PREMIUM : SYNCHRONISATION CLOUD & APP MOBILE --}}
             <div x-show="!sidebarCollapsed" 
-                 class="rounded-3xl bg-gradient-to-br from-[#124231] via-[#16503c] to-[#0c2f23] p-4 text-white shadow-lg shadow-emerald-950/20 relative overflow-hidden border border-emerald-800/40">
+                 class="{{ $identite ? 'carte-agence' : '' }} rounded-3xl bg-gradient-to-br from-[#124231] via-[#16503c] to-[#0c2f23] p-4 text-white shadow-lg shadow-emerald-950/20 relative overflow-hidden border border-emerald-800/40">
                 <div class="relative z-10">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-black tracking-wide border border-emerald-400/30">

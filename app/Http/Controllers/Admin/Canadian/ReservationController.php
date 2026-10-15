@@ -12,7 +12,7 @@ class ReservationController extends Controller
     {
         $reservations = Reservation::with(['vol', 'canadianUser'])
             ->latest()
-            ->paginate(15);
+            ->paginate(5)->withQueryString();
 
         $total      = Reservation::count();
         $confirmees = Reservation::whereIn('statut', ['Confirmee', 'Paye'])->count();

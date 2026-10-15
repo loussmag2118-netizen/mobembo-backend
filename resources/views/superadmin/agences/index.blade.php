@@ -32,7 +32,7 @@
                             <i class="fa-solid fa-building"></i>
                         </div>
                     </div>
-                    <p class="text-3xl font-black text-slate-900">{{ $totalAgences ?? $agences->count() }}</p>
+                    <p class="text-3xl font-black text-slate-900">{{ $totalAgences }}</p>
                     <p class="text-xs text-slate-400 mt-2">Compagnies conventionnées</p>
                 </div>
 
@@ -95,7 +95,7 @@
 
                 <!-- FORMULAIRE ACCORDÉON -->
                 <div x-show="formOpen" x-transition class="mt-6 pt-6 border-t border-slate-100" style="display: none;">
-                    <form action="{{ route('superadmin.agences.store') }}" method="POST">
+                    <form action="{{ route('superadmin.agences.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <!-- Section Agence -->
@@ -106,13 +106,56 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom de l'agence <span class="text-red-500">*</span></label>
-                                    <input type="text" name="nom_agence" value="{{ old('nom_agence') }}" required placeholder="Ex: Mikalou Express" 
+                                    <input type="text" name="nom_agence" value="{{ old('nom_agence') }}" required placeholder="Ex: Mikalou Express" @input="window.dispatchEvent(new CustomEvent('nom-agence', { detail: $event.target.value }))" 
                                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Date de partenariat <span class="text-red-500">*</span></label>
                                     <input type="date" name="date_partenariat" value="{{ old('date_partenariat', date('Y-m-d')) }}" required 
                                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Identité visuelle -->
+                        <div class="mb-6 pt-5 border-t border-slate-100"
+                             x-data="{ couleur: '{{ old('couleur', '#124231') }}', couleur2: '{{ old('couleur_secondaire', '#F9A825') }}', apercu: null, nom: @js(old('nom_agence', '')) }"
+                             @nom-agence.window="nom = $event.detail">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-2">
+                                <i class="fa-solid fa-palette text-slate-400"></i> Identité visuelle
+                            </h3>
+                            <p class="text-xs text-slate-400 mb-4">L'administration de l'agence et sa page dans l'application prendront son logo et ses couleurs. L'agence pourra les modifier ensuite.</p>
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Logo de l'entreprise</label>
+                                    <label class="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-white transition">
+                                        <span class="w-14 h-14 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                                            <template x-if="apercu"><img :src="apercu" class="w-full h-full object-cover" alt=""></template>
+                                            <template x-if="!apercu"><i class="fa-solid fa-image text-slate-300 text-xl"></i></template>
+                                        </span>
+                                        <span class="text-xs font-semibold text-slate-500">JPG, PNG ou WebP, 2 Mo max.<br><span class="text-slate-700 font-bold">Choisir une image</span></span>
+                                        <input type="file" name="logo" accept="image/jpeg,image/png,image/webp" class="hidden"
+                                               @change="const f = $event.target.files[0]; apercu = f ? URL.createObjectURL(f) : null">
+                                    </label>
+                                    @error('logo')<p class="text-xs text-red-600 font-semibold mt-1">{{ $message }}</p>@enderror
+                                </div>
+                                <div class="lg:col-span-1">
+                                    @include('partials.choix-couleurs')
+                                </div>
+                                {{-- Aperçu du menu de l'administration --}}
+                                <div class="rounded-2xl border border-slate-200 overflow-hidden">
+                                    <div class="h-1.5" :style="'background: linear-gradient(90deg, ' + couleur + ', ' + couleur2 + ')'"></div>
+                                    <div class="p-3 flex items-center gap-2.5 border-b border-slate-100">
+                                        <span class="w-9 h-9 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                                            <template x-if="apercu"><img :src="apercu" class="w-full h-full object-cover" alt=""></template>
+                                            <template x-if="!apercu"><i class="fa-solid fa-bus text-sm" :style="'color:' + couleur"></i></template>
+                                        </span>
+                                        <span class="text-sm font-extrabold text-slate-900 truncate" x-text="nom || 'Nom de l\'agence'"></span>
+                                    </div>
+                                    <div class="p-3 space-y-1.5">
+                                        <div class="px-3 py-2 rounded-xl text-white text-xs font-bold flex items-center gap-2" :style="'background: linear-gradient(135deg, ' + couleur + ', ' + couleur2 + ')'"><i class="fa-solid fa-gauge-high"></i> Tableau de bord</div>
+                                        <div class="px-3 py-2 rounded-xl text-slate-500 text-xs font-bold flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> Planifications</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -165,7 +208,7 @@
                     <div>
                         <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-list-check text-slate-700"></i>
-                            <span>Liste des Agences Partenaires ({{ $agences->count() }})</span>
+                            <span>Liste des Agences Partenaires ({{ $agences->total() }})</span>
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">Contrôlez les statuts et l'accès au réseau</p>
                     </div>
@@ -204,9 +247,14 @@
                                     {{-- Agence --}}
                                     <td class="py-4 px-6">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-inner">
-                                                {{ $monogram }}
-                                            </div>
+                                            @if($agence->logoMedia)
+                                                <img src="{{ $agence->logoMedia->url() }}" alt="" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0">
+                                            @else
+                                                <div class="w-10 h-10 rounded-xl text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-inner"
+                                                     style="background: linear-gradient(135deg, {{ $agence->identite()['fond'] }}, {{ $agence->identite()['fonce'] }})">
+                                                    {{ $monogram }}
+                                                </div>
+                                            @endif
                                             <div>
                                                 <a href="{{ route('superadmin.agences.show', $agence) }}" class="font-extrabold text-slate-900 hover:text-emerald-700 hover:underline">{{ $agence->nom_agence }}</a>
                                                 <div class="text-[11px] text-slate-400">Partenaire depuis le {{ \Carbon\Carbon::parse($agence->date_partenariat)->format('d/m/Y') }}</div>
@@ -283,6 +331,11 @@
                         </tbody>
                     </table>
                 </div>
+                @if(method_exists($agences, 'links') && $agences->hasPages())
+                    <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                        {{ $agences->links() }}
+                    </div>
+                @endif
             </div>
 
 </div>

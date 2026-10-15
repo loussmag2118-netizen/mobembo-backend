@@ -31,7 +31,7 @@
                     <i class="fa-solid fa-city"></i>
                 </div>
             </div>
-            <p class="text-3xl font-black text-slate-900">{{ $villes->count() }}</p>
+            <p class="text-3xl font-black text-slate-900">{{ $stats['villes'] }}</p>
             <p class="text-xs text-slate-400 mt-2">Dans le référentiel national</p>
         </div>
 
@@ -42,7 +42,7 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
             </div>
-            <p class="text-3xl font-black text-emerald-600">{{ $villes->where('actif', true)->count() }}</p>
+            <p class="text-3xl font-black text-emerald-600">{{ $stats['actives'] }}</p>
             <p class="text-xs text-slate-400 mt-2">Proposées aux agences</p>
         </div>
 
@@ -53,7 +53,7 @@
                     <i class="fa-solid fa-location-dot"></i>
                 </div>
             </div>
-            <p class="text-3xl font-black text-slate-900">{{ $villes->sum('gares_count') }}</p>
+            <p class="text-3xl font-black text-slate-900">{{ $stats['gares'] }}</p>
             <p class="text-xs text-slate-400 mt-2">Toutes agences confondues</p>
         </div>
     </div>
@@ -86,7 +86,7 @@
             <div>
                 <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
                     <i class="fa-solid fa-list-check text-slate-700"></i>
-                    <span>Liste des villes ({{ $villes->count() }})</span>
+                    <span>Liste des villes ({{ $stats['villes'] }})</span>
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">Une ville désactivée n'est plus proposée pour les nouvelles gares ; les gares existantes continuent de fonctionner.</p>
             </div>
@@ -208,6 +208,11 @@
                 </tbody>
             </table>
         </div>
+        @if(method_exists($villes, 'links') && $villes->hasPages())
+            <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                {{ $villes->links() }}
+            </div>
+        @endif
     </div>
 
 </div>

@@ -14,7 +14,7 @@ class PromoController extends Controller
      */
     public function index()
     {
-        $promos       = Promo::orderByDesc('created_at')->paginate(15);
+        $promos       = Promo::orderByDesc('created_at')->paginate(5)->withQueryString();
         $actifs       = Promo::where('actif', true)->count();
         $expires      = Promo::whereNotNull('date_fin')
                             ->where('date_fin', '<', now())

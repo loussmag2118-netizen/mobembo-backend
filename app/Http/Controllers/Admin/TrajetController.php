@@ -25,7 +25,7 @@ class TrajetController extends Controller
         $trajets = Trajet::with(['gareDepart', 'gareArrivee', 'vagues', 'bus'])
             ->where('agence_id', Auth::user()->agence_id)
             ->latest()
-            ->get();
+            ->paginate(5)->withQueryString();
 
         return view('admin.trajets.index', compact('trajets'));
     }

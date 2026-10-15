@@ -78,6 +78,38 @@
                 </button>
             </form>
         </div>
+
+        {{-- Identité visuelle --}}
+        <form action="{{ route('superadmin.agences.identite', $agence) }}" method="POST" enctype="multipart/form-data"
+              class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6"
+              x-data="{ couleur: '{{ old('couleur', $agence->couleur ?? '#124231') }}', couleur2: '{{ old('couleur_secondaire', $agence->couleur_secondaire ?? '#F9A825') }}', apercu: @js($agence->logoMedia?->url()) }">
+            @csrf
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-900">Identité visuelle</h2>
+                    <p class="text-xs text-slate-500 font-semibold">Logo et couleurs de l'administration de l'agence et de sa page dans l'application.</p>
+                </div>
+                <div class="h-2 w-28 rounded-full shrink-0" :style="'background: linear-gradient(90deg, ' + couleur + ', ' + couleur2 + ')'"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+                <label class="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-white transition">
+                    <span class="w-16 h-16 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                        <template x-if="apercu"><img :src="apercu" class="w-full h-full object-cover" alt=""></template>
+                        <template x-if="!apercu"><i class="fa-solid fa-image text-slate-300 text-xl"></i></template>
+                    </span>
+                    <span class="text-xs font-semibold text-slate-500">Logo : JPG, PNG ou WebP, 2 Mo max.<br><span class="text-slate-700 font-bold">Changer le logo</span></span>
+                    <input type="file" name="logo" accept="image/jpeg,image/png,image/webp" class="hidden"
+                           @change="const f = $event.target.files[0]; if (f) apercu = URL.createObjectURL(f)">
+                </label>
+                <div class="md:col-span-2">
+                    @include('partials.choix-couleurs')
+                    @error('logo')<p class="text-xs text-red-600 font-semibold mt-1">{{ $message }}</p>@enderror
+                </div>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button class="px-5 py-2.5 rounded-xl bg-[#124231] text-white text-sm font-bold hover:bg-[#0c2f23]">Enregistrer l'identité</button>
+            </div>
+        </form>
     </div>
 
     {{-- Administrateurs --}}

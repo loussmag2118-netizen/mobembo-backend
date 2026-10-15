@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Media;
 use App\Support\Audit;
+use App\Support\Couleurs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Vitrine de l'agence (page d'accueil de l'agence dans l'application) :
@@ -36,15 +36,17 @@ class VitrineController extends Controller
     {
         $agence = $this->agence();
         $donnees = $request->validate([
-            'slogan'  => 'nullable|string|max:160',
-            'couleur' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-        ], ['couleur.regex' => 'La couleur doit être au format #RRGGBB.']);
+            'slogan'             => 'nullable|string|max:160',
+            'couleur'            => ['nullable', Couleurs::REGLE],
+            'couleur_secondaire' => ['nullable', Couleurs::REGLE],
+        ], ['couleur.regex' => 'La couleur doit être au format #RRGGBB.', 'couleur_secondaire.regex' => 'La couleur doit être au format #RRGGBB.']);
 
         $agence->update([
-            'slogan'  => $donnees['slogan'] ?? null,
-            'couleur' => isset($donnees['couleur']) ? strtoupper($donnees['couleur']) : null,
+            'slogan'             => $donnees['slogan'] ?? null,
+            'couleur'            => isset($donnees['couleur']) ? strtoupper($donnees['couleur']) : null,
+            'couleur_secondaire' => isset($donnees['couleur_secondaire']) ? strtoupper($donnees['couleur_secondaire']) : null,
         ]);
-        Audit::log('admin.vitrine.modifiee', $agence, ['slogan' => $agence->slogan, 'couleur' => $agence->couleur]);
+        Audit::log('admin.vitrine.modifiee', $agence, $agence->only(['slogan', 'couleur', 'couleur_secondaire']));
 
         return back()->with('success', 'Vitrine enregistrée. Elle apparaît dans l\'application.');
     }
@@ -55,14 +57,7 @@ class VitrineController extends Controller
         $request->validate(['image' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048'],
             ['image.max' => "L'image ne doit pas dépasser 2 Mo."]);
 
-        DB::transaction(function () use ($request, $agence) {
-            $ancien = $agence->logo_media_id;
-            $media = $this->enregistrer($request, $agence->id, 'logo');
-            $agence->update(['logo_media_id' => $media->id]);
-            if ($ancien) {
-                Media::whereKey($ancien)->delete();
-            }
-        });
+        $agence->remplacerLogo($request->file('image'));
         Audit::log('admin.vitrine.logo', $agence);
 
         return back()->with('success', 'Logo mis à jour.');
@@ -79,7 +74,7 @@ class VitrineController extends Controller
         }
 
         $ordre = (int) $agence->photos()->max('ordre') + 1;
-        $this->enregistrer($request, $agence->id, 'photo', $ordre);
+        Media::depuisFichier($request->file('image'), $agence->id, 'photo', $ordre);
         Audit::log('admin.vitrine.photo_ajoutee', $agence);
 
         return back()->with('success', 'Photo ajoutée.');
@@ -93,19 +88,5 @@ class VitrineController extends Controller
         Audit::log('admin.vitrine.photo_supprimee', $agence);
 
         return back()->with('success', 'Photo supprimée.');
-    }
-
-    private function enregistrer(Request $request, int $agenceId, string $type, int $ordre = 0): Media
-    {
-        $fichier = $request->file('image');
-
-        return Media::create([
-            'agence_id' => $agenceId,
-            'type'      => $type,
-            'ordre'     => $ordre,
-            'mime'      => $fichier->getMimeType(),
-            'taille'    => $fichier->getSize(),
-            'contenu'   => file_get_contents($fichier->getRealPath()),
-        ]);
     }
 }

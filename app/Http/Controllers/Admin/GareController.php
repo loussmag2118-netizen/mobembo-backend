@@ -21,7 +21,7 @@ class GareController extends Controller
         $gares = Gare::where('agence_id', Auth::user()->agence_id)
             ->orderBy('ville')
             ->orderBy('nom_gare')
-            ->get();
+            ->paginate(5)->withQueryString();
         return view('admin.gares.index', compact('gares'));
     }
 

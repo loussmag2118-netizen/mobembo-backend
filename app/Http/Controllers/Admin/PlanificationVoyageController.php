@@ -31,7 +31,7 @@ class PlanificationVoyageController extends Controller
             ])
             ->where('agence_id', $agenceId)
             ->latest('date_voyage')
-            ->paginate(15);
+            ->paginate(5)->withQueryString();
 
         return view('admin.planifications.index', compact('planifications'));
     }

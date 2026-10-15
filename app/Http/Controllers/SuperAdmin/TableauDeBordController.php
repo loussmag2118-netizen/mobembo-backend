@@ -87,7 +87,7 @@ class TableauDeBordController extends Controller
             $requete->whereDate('created_at', '>=', $request->du);
         }
 
-        $entrees = $requete->paginate(50)->withQueryString();
+        $entrees = $requete->paginate(5)->withQueryString();
         $nomsAgences = Agence::orderBy('nom_agence')->pluck('nom_agence', 'id');
 
         return view('superadmin.journal', compact('entrees', 'nomsAgences'));

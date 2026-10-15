@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 
 /**
  * Image stockée en base (logo et photos des agences), servie par
@@ -23,6 +24,19 @@ class Media extends Model
         static::addGlobalScope('sans_contenu', function (Builder $q) {
             $q->select(['id', 'agence_id', 'type', 'ordre', 'mime', 'taille', 'created_at', 'updated_at']);
         });
+    }
+
+    /** Enregistre une image envoyée par formulaire. */
+    public static function depuisFichier(UploadedFile $fichier, ?int $agenceId, string $type, int $ordre = 0): self
+    {
+        return self::create([
+            'agence_id' => $agenceId,
+            'type'      => $type,
+            'ordre'     => $ordre,
+            'mime'      => $fichier->getMimeType(),
+            'taille'    => $fichier->getSize(),
+            'contenu'   => file_get_contents($fichier->getRealPath()),
+        ]);
     }
 
     public function url(): string

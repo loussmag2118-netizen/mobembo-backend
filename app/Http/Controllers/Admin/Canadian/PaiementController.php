@@ -13,7 +13,7 @@ class PaiementController extends Controller
      */
     public function index()
     {
-        $paiements = Paiement::latest()->paginate(15);
+        $paiements = Paiement::latest()->paginate(5)->withQueryString();
 
         // Statistiques
         $revenus    = Paiement::where('statut', 'Reussi')->sum('montant');

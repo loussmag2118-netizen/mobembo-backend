@@ -30,10 +30,10 @@ class VoyageurController extends Controller
             ])
             ->where('agence_id', $agenceId)
             ->latest()
-            ->get();
+            ->paginate(5)->withQueryString();
 
-        // Transformation pour alimenter la vue Blade voyageurs
-        $voyageurs = $tickets->map(function ($ticket) {
+        // Transformation pour alimenter la vue Blade voyageurs (page courante)
+        $voyageurs = $tickets->through(function ($ticket) {
             $voyage      = $ticket->planificationVoyage;
             $trajet      = $voyage?->trajet;
             $gareDepart  = $trajet?->gareDepart?->nom_gare ?? '';

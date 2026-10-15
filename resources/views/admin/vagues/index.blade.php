@@ -46,7 +46,7 @@
 
             <span class="text-sm font-bold text-slate-500 bg-slate-100 px-4 py-2.5 rounded-2xl">
                 <i class="fa-solid fa-clock text-purple-500 mr-1.5"></i>
-                {{ $vagues->count() }} vague(s) configurée(s)
+                {{ $vagues->total() }} vague(s) configurée(s)
             </span>
         </div>
 
@@ -137,6 +137,11 @@
                 </tbody>
             </table>
         </div>
+        @if(method_exists($vagues, 'links') && $vagues->hasPages())
+            <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                {{ $vagues->links() }}
+            </div>
+        @endif
     </div>
 
 </div>

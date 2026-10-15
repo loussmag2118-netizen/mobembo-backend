@@ -124,6 +124,8 @@ Route::middleware('auth:superadmin')
             ->name('agences.show');
         Route::put('/agences/{agence}', [SuperAdminAgenceController::class, 'update'])
             ->name('agences.update');
+        Route::post('/agences/{agence}/identite', [SuperAdminAgenceController::class, 'identite'])
+            ->name('agences.identite');
         Route::post('/agences/{agence}/admins', [SuperAdminAgenceController::class, 'ajouterAdmin'])
             ->name('agences.admins.store');
         Route::post('/agences/{agence}/admins/{admin}/mot-de-passe', [SuperAdminAgenceController::class, 'reinitialiserAdmin'])

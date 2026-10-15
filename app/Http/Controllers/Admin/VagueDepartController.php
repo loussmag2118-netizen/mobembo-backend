@@ -22,7 +22,7 @@ class VagueDepartController extends Controller
         $vagues = VagueDepart::with('trajet')
             ->where('agence_id', $agenceId)
             ->orderBy('heure_depart')
-            ->get();
+            ->paginate(5)->withQueryString();
 
         return view('admin.vagues.index', compact('vagues'));
     }

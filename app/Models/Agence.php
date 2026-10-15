@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Support\Couleurs;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
 class Agence extends Model
 {
     protected $table = 'agences';
-    protected $fillable = ['nom_agence', 'slogan', 'couleur', 'logo_media_id', 'statut', 'age_max_enfant', 'choix_siege', 'date_partenariat', 'superadmin_id'];
+    protected $fillable = ['nom_agence', 'slogan', 'couleur', 'couleur_secondaire', 'logo_media_id', 'statut', 'age_max_enfant', 'choix_siege', 'date_partenariat', 'superadmin_id'];
 
     protected $casts = ['age_max_enfant' => 'integer', 'choix_siege' => 'boolean'];
 
@@ -105,8 +108,45 @@ class Agence extends Model
         return [
             'logo_url' => $this->logoMedia?->url(),
             'couleur'  => $this->couleur,
+            'couleur_secondaire' => $this->couleur_secondaire,
             'slogan'   => $this->slogan,
             'photos'   => $this->photos->map(fn (Media $m) => $m->url())->values()->all(),
+        ];
+    }
+
+    /** Remplace le logo de l'agence (l'ancien est supprimé). */
+    public function remplacerLogo(UploadedFile $fichier): void
+    {
+        DB::transaction(function () use ($fichier) {
+            $ancien = $this->logo_media_id;
+            $this->update(['logo_media_id' => Media::depuisFichier($fichier, $this->id, 'logo')->id]);
+            if ($ancien) {
+                Media::whereKey($ancien)->delete();
+            }
+        });
+    }
+
+    /**
+     * Identité visuelle de l'administration de l'agence : ses couleurs
+     * (sinon le vert Mobembo) et son logo.
+     *  - fond : couleur principale lisible sous un texte blanc ;
+     *  - fonce : survol des boutons et dégradés.
+     */
+    public function identite(): array
+    {
+        $primaire = $this->couleur ?: '#124231';
+        $secondaire = $this->couleur_secondaire ?: ($this->couleur ? Couleurs::nuancer($this->couleur, -0.45) : '#10B981');
+        $fond = Couleurs::pourTexteBlanc($primaire);
+
+        return [
+            'primaire'   => $primaire,
+            'secondaire' => $secondaire,
+            'fond'       => $fond,
+            'fonce'      => Couleurs::nuancer($fond, 0.3),
+            'fond_rvb'   => Couleurs::rvbTexte($fond),
+            // Accent lisible sur le fond : la secondaire, éclaircie si elle est sombre
+            'accent'     => Couleurs::contrasteBlanc($secondaire) > 3 ? Couleurs::nuancer($secondaire, -0.6) : $secondaire,
+            'logo'       => $this->logoMedia?->url(),
         ];
     }
 }

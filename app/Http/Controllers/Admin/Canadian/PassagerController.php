@@ -25,7 +25,7 @@ class PassagerController extends Controller
             $query->where('type', $request->type);
         }
 
-        $passagers = $query->latest()->paginate(20);
+        $passagers = $query->latest()->paginate(5)->withQueryString();
 
         return view('admin.canadian.passagers.index', compact('passagers'));
     }

@@ -103,7 +103,7 @@ class AdminHistoriqueController extends Controller
         $operations = $query
             ->orderByDesc('date_paiement')
             ->orderByDesc('created_at')
-            ->paginate(20)
+            ->paginate(5)
             ->withQueryString();
 
         // ============================================================

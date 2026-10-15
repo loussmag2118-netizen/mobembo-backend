@@ -54,7 +54,7 @@
                         @click="filterStatut = 'all'" 
                         :class="filterStatut === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
                         class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
-                    Tous ({{ $agents->count() }})
+                    Tous ({{ $agents->total() }})
                 </button>
                 <button type="button" 
                         @click="filterStatut = 'actif'" 
@@ -217,6 +217,11 @@
                 </tbody>
             </table>
         </div>
+        @if(method_exists($agents, 'links') && $agents->hasPages())
+            <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                {{ $agents->links() }}
+            </div>
+        @endif
     </div>
 
 </div>

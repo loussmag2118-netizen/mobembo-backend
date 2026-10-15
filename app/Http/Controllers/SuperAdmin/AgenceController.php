@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Utilisateur;
 use App\Support\Audit;
+use App\Support\Couleurs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,17 +20,18 @@ class AgenceController extends Controller
      */
     public function index()
     {
-        $agences = Agence::with(['admin'])
+        $agences = Agence::with(['admin', 'logoMedia'])
             ->withCount(['utilisateurs as agents_count' => function($query) {
                 $query->where('role', 'Agent');
             }, 'bus'])
             ->orderBy('id', 'desc')
-            ->get();
+            ->paginate(5)->withQueryString();
 
-        $totalAgences = $agences->count();
-        $agencesActives = $agences->where('statut', 'Actif')->count();
-        $totalAgents = $agences->sum('agents_count');
-        $totalBus = $agences->sum('bus_count');
+        // Chiffres de toute la plateforme (pas seulement de la page)
+        $totalAgences = Agence::count();
+        $agencesActives = Agence::where('statut', 'Actif')->count();
+        $totalAgents = Utilisateur::where('role', 'Agent')->whereNotNull('agence_id')->count();
+        $totalBus = \App\Models\Bus::count();
 
         return view('superadmin.agences.index', compact(
             'agences',
@@ -54,7 +56,14 @@ class AgenceController extends Controller
             'admin_nom'        => 'required|string|max:100',
             'admin_prenom'     => 'required|string|max:100',
             'admin_password'   => 'required|string|min:8',
+            // Identité visuelle (facultative, modifiable ensuite par l'agence)
+            'couleur'            => ['nullable', Couleurs::REGLE],
+            'couleur_secondaire' => ['nullable', Couleurs::REGLE],
+            'logo'               => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ], [
+            'couleur.regex'            => 'La couleur doit être au format #RRGGBB.',
+            'couleur_secondaire.regex' => 'La couleur doit être au format #RRGGBB.',
+            'logo.max'                 => 'Le logo ne doit pas dépasser 2 Mo.',
             'nom_agence.unique'        => 'Une agence avec ce nom existe déjà.',
             'admin_telephone.unique'   => 'Ce numéro de téléphone est déjà utilisé.',
             'admin_telephone.regex'    => 'Le numéro doit commencer par 05 ou 06 et avoir 9 chiffres.',
@@ -67,7 +76,13 @@ class AgenceController extends Controller
                 'statut'           => 'Actif',
                 'date_partenariat' => $request->date_partenariat,
                 'superadmin_id'    => Auth::id(),
+                'couleur'            => $request->filled('couleur') ? strtoupper($request->couleur) : null,
+                'couleur_secondaire' => $request->filled('couleur_secondaire') ? strtoupper($request->couleur_secondaire) : null,
             ]);
+
+            if ($request->hasFile('logo')) {
+                $agence->remplacerLogo($request->file('logo'));
+            }
 
             $this->creerAdmin($agence, $request->admin_nom, $request->admin_prenom, $request->admin_telephone, $request->admin_password);
 
@@ -112,6 +127,34 @@ class AgenceController extends Controller
         Audit::log('superadmin.agence.modifiee', $agence, ['avant' => $avant, 'apres' => $agence->only(array_keys($donnees))]);
 
         return back()->with('success', "Les réglages de « {$agence->nom_agence} » ont été enregistrés.");
+    }
+
+    /**
+     * Couleurs et logo d'une agence (aussi modifiables par l'agence
+     * depuis sa vitrine).
+     */
+    public function identite(Request $request, Agence $agence)
+    {
+        $donnees = $request->validate([
+            'couleur'            => ['nullable', Couleurs::REGLE],
+            'couleur_secondaire' => ['nullable', Couleurs::REGLE],
+            'logo'               => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'couleur.regex'            => 'La couleur doit être au format #RRGGBB.',
+            'couleur_secondaire.regex' => 'La couleur doit être au format #RRGGBB.',
+            'logo.max'                 => 'Le logo ne doit pas dépasser 2 Mo.',
+        ]);
+
+        $agence->update([
+            'couleur'            => isset($donnees['couleur']) ? strtoupper($donnees['couleur']) : null,
+            'couleur_secondaire' => isset($donnees['couleur_secondaire']) ? strtoupper($donnees['couleur_secondaire']) : null,
+        ]);
+        if ($request->hasFile('logo')) {
+            $agence->remplacerLogo($request->file('logo'));
+        }
+        Audit::log('superadmin.agence.identite', $agence, $agence->only(['couleur', 'couleur_secondaire', 'logo_media_id']));
+
+        return back()->with('success', "L'identité visuelle de « {$agence->nom_agence} » a été enregistrée.");
     }
 
     /**

@@ -46,7 +46,7 @@
 
             <span class="text-sm font-bold text-slate-500 bg-slate-100 px-4 py-2.5 rounded-2xl">
                 <i class="fa-solid fa-route text-teal-500 mr-1.5"></i>
-                {{ $trajets->count() }} ligne(s) configurée(s)
+                {{ $trajets->total() }} ligne(s) configurée(s)
             </span>
         </div>
 
@@ -166,6 +166,11 @@
                 </tbody>
             </table>
         </div>
+        @if(method_exists($trajets, 'links') && $trajets->hasPages())
+            <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                {{ $trajets->links() }}
+            </div>
+        @endif
     </div>
 
 </div>

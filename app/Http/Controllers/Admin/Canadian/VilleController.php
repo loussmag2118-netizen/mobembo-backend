@@ -10,7 +10,7 @@ class VilleController extends Controller
 {
     public function index()
     {
-        $villes = Ville::orderBy('nom')->paginate(20);
+        $villes = Ville::orderBy('nom')->paginate(5)->withQueryString();
         return view('admin.canadian.villes.index', compact('villes'));
     }
 

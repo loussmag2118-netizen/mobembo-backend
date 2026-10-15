@@ -45,7 +45,7 @@
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Programmés</p>
             </div>
             <p class="text-2xl font-black text-slate-900">
-                {{ $vols->where('statut', 'programme')->count() }}
+                {{ $parStatut['programme'] ?? 0 }}
             </p>
         </div>
 
@@ -57,7 +57,7 @@
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">En vol</p>
             </div>
             <p class="text-2xl font-black text-slate-900">
-                {{ $vols->where('statut', 'en_vol')->count() }}
+                {{ $parStatut['en_vol'] ?? 0 }}
             </p>
         </div>
 
@@ -69,7 +69,7 @@
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Annulés</p>
             </div>
             <p class="text-2xl font-black text-slate-900">
-                {{ $vols->where('statut', 'annule')->count() }}
+                {{ $parStatut['annule'] ?? 0 }}
             </p>
         </div>
     </div>

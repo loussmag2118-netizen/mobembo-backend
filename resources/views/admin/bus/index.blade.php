@@ -35,19 +35,19 @@
     {{-- STATISTIQUES RAPIDES --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-            <div class="text-2xl font-black text-slate-900">{{ $bus->count() }}</div>
+            <div class="text-2xl font-black text-slate-900">{{ $bus->total() }}</div>
             <div class="text-sm font-bold text-slate-500 mt-1">Total flotte</div>
         </div>
         <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 shadow-sm">
-            <div class="text-2xl font-black text-emerald-700">{{ $bus->where('statut', 'Disponible')->count() }}</div>
+            <div class="text-2xl font-black text-emerald-700">{{ $parStatut['Disponible'] ?? 0 }}</div>
             <div class="text-sm font-bold text-emerald-600 mt-1">Disponibles</div>
         </div>
         <div class="bg-amber-50 rounded-2xl p-5 border border-amber-100 shadow-sm">
-            <div class="text-2xl font-black text-amber-700">{{ $bus->where('statut', 'Maintenance')->count() }}</div>
+            <div class="text-2xl font-black text-amber-700">{{ $parStatut['Maintenance'] ?? 0 }}</div>
             <div class="text-sm font-bold text-amber-600 mt-1">En maintenance</div>
         </div>
         <div class="bg-red-50 rounded-2xl p-5 border border-red-100 shadow-sm">
-            <div class="text-2xl font-black text-red-700">{{ $bus->where('statut', 'Indisponible')->count() }}</div>
+            <div class="text-2xl font-black text-red-700">{{ $parStatut['Indisponible'] ?? 0 }}</div>
             <div class="text-sm font-bold text-red-600 mt-1">Indisponibles</div>
         </div>
     </div>
@@ -72,7 +72,7 @@
                         @click="filterStatut = 'all'" 
                         :class="filterStatut === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
                         class="px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">
-                    Tous ({{ $bus->count() }})
+                    Tous ({{ $bus->total() }})
                 </button>
                 <button type="button" 
                         @click="filterStatut = 'Disponible'" 

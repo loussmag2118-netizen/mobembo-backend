@@ -14,8 +14,10 @@ class VolController extends Controller
 {
     public function index()
     {
-        $vols = Vol::latest()->paginate(20);
-        return view('admin.canadian.vols.index', compact('vols'));
+        $vols = Vol::latest()->paginate(5)->withQueryString();
+        // Chiffres de tous les vols (pas seulement de la page)
+        $parStatut = Vol::selectRaw('statut, COUNT(*) AS n')->groupBy('statut')->pluck('n', 'statut');
+        return view('admin.canadian.vols.index', compact('vols', 'parStatut'));
     }
 
     public function create()

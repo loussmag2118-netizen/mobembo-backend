@@ -41,7 +41,7 @@ class AgentHistoryController extends Controller
                 'agentControleur',
             ])
             ->latest()
-            ->paginate(15);
+            ->paginate(5)->withQueryString();
 
         return view('admin.agents.historique', compact('agent', 'operations'));
     }

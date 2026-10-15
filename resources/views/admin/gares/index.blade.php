@@ -46,7 +46,7 @@
 
             <span class="text-sm font-bold text-slate-500 bg-slate-100 px-4 py-2.5 rounded-2xl">
                 <i class="fa-solid fa-location-dot text-amber-500 mr-1.5"></i>
-                {{ $gares->count() }} gare(s) enregistrée(s)
+                {{ $gares->total() }} gare(s) enregistrée(s)
             </span>
         </div>
 

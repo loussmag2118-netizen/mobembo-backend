@@ -93,6 +93,8 @@ class ClientBusController extends Controller
                 'heure_depart'       => $v->vagueDepart?->heure_depart ? substr($v->vagueDepart->heure_depart, 0, 5) : null,
                 'nom_vague'          => $v->vagueDepart?->nom_vague,
                 'prix'               => (float) $v->prix,
+                'prix_enfant'        => $v->prix_enfant !== null ? (float) $v->prix_enfant : null,   // null = prix adulte
+                'age_max_enfant'     => (int) ($v->agence?->age_max_enfant ?? 12),
                 'places_disponibles' => (int) $v->places_disponibles,
                 // Facultatifs : null si l'agence ne les a pas renseignés
                 'duree_minutes'      => $v->trajet?->duree_minutes,
@@ -130,6 +132,8 @@ class ClientBusController extends Controller
                     'agence_logo'         => $t->agence?->logo_app,
                     'nom'                 => $t->nom_passager,
                     'prenom'              => $t->prenom_passager,
+                    'categorie'           => $t->categorie_passager ?? 'Adulte',
+                    'age'                 => $t->age_passager,
                     'ville_depart'        => $t->ville_depart ?? $voyage?->trajet?->ville_depart,
                     'ville_arrivee'       => $t->ville_arrivee ?? $voyage?->trajet?->ville_arrivee,
                     'gare_depart'         => $voyage?->trajet?->gareDepart?->nom_gare,

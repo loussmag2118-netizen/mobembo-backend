@@ -26,6 +26,32 @@
         </div>
     </div>
 
+    {{-- Réglage du tarif enfant de l'agence (admin) --}}
+    @if(auth()->user()?->role === 'Admin')
+        <form action="{{ route('admin.agence.age_enfant') }}" method="POST"
+              class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-2xl border border-slate-200/80 px-5 py-4">
+            @csrf
+            @method('PATCH')
+            <div class="flex items-center gap-3 flex-1">
+                <span class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fa-solid fa-child"></i></span>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">Tarif enfant</p>
+                    <p class="text-xs text-slate-500 font-semibold">Âge maximum pour bénéficier du prix enfant défini sur chaque départ.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="number" name="age_max_enfant" min="1" max="17" required
+                       value="{{ old('age_max_enfant', auth()->user()->agence?->age_max_enfant ?? 12) }}"
+                       class="w-20 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <span class="text-sm font-bold text-slate-600">ans</span>
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">Enregistrer</button>
+            </div>
+        </form>
+        @error('age_max_enfant')
+            <p class="text-xs font-bold text-rose-600 -mt-4">{{ $message }}</p>
+        @enderror
+    @endif
+
     {{-- CONTENEUR TABLEAU AVEC RECHERCHE ET FILTRES --}}
     <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
         

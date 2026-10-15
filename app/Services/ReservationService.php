@@ -29,12 +29,75 @@ class ReservationService
         return max(1, (int) config('paiement.duree_reservation_minutes', 15));
     }
 
-    /**
-     * Vérifie que le montant envoyé correspond au prix du départ.
-     */
-    public function verifierMontant(PlanificationVoyage $voyage, int $nombrePassagers, float $montantRecu): void
+    /** Prix d'un billet pour une catégorie (« Adulte » ou « Enfant »). */
+    public function prixPour(PlanificationVoyage $voyage, string $categorie): float
     {
-        $attendu = round((float) $voyage->prix * $nombrePassagers, 2);
+        if ($categorie === 'Enfant' && $voyage->prix_enfant !== null) {
+            return (float) $voyage->prix_enfant;
+        }
+
+        return (float) $voyage->prix;
+    }
+
+    /** Âge maximum « enfant » de l'agence du départ (12 ans par défaut). */
+    public function ageMaxEnfant(PlanificationVoyage $voyage): int
+    {
+        $voyage->loadMissing('agence');
+
+        return (int) ($voyage->agence?->age_max_enfant ?? 12);
+    }
+
+    /**
+     * Normalise les passagers : catégorie (Adulte par défaut), âge d'un
+     * enfant obligatoire et inférieur ou égal à la limite de l'agence.
+     *
+     * @return array<int, array{nom: string, prenom: ?string, telephone: ?string, categorie: string, age: ?int}>
+     */
+    public function normaliserPassagers(PlanificationVoyage $voyage, array $passagers): array
+    {
+        $ageMax = $this->ageMaxEnfant($voyage);
+
+        return array_map(function (array $p) use ($ageMax) {
+            $categorie = ($p['categorie'] ?? 'Adulte') === 'Enfant' ? 'Enfant' : 'Adulte';
+            $age = isset($p['age']) && $p['age'] !== '' ? (int) $p['age'] : null;
+
+            if ($categorie === 'Enfant') {
+                if ($age === null || $age < 0) {
+                    throw new ReservationImpossibleException("Indiquez l'âge de chaque enfant.");
+                }
+                if ($age > $ageMax) {
+                    throw new ReservationImpossibleException(
+                        "Le tarif enfant s'applique jusqu'à {$ageMax} ans. Choisissez le tarif adulte pour un passager de {$age} ans."
+                    );
+                }
+            }
+
+            return [
+                'nom'       => $p['nom'],
+                'prenom'    => $p['prenom'] ?? null,
+                'telephone' => $p['telephone'] ?? null,
+                'categorie' => $categorie,
+                'age'       => $categorie === 'Enfant' ? $age : null,
+            ];
+        }, array_values($passagers));
+    }
+
+    /** Montant total attendu pour ces passagers. */
+    public function montantAttendu(PlanificationVoyage $voyage, array $passagers): float
+    {
+        return round(array_sum(array_map(
+            fn ($p) => $this->prixPour($voyage, $p['categorie'] ?? 'Adulte'),
+            $this->normaliserPassagers($voyage, $passagers)
+        )), 2);
+    }
+
+    /**
+     * Vérifie que le montant envoyé correspond aux prix du départ
+     * (adulte / enfant) pour ces passagers.
+     */
+    public function verifierMontant(PlanificationVoyage $voyage, array $passagers, float $montantRecu): void
+    {
+        $attendu = $this->montantAttendu($voyage, $passagers);
 
         if (abs($attendu - round($montantRecu, 2)) > 0.01) {
             throw new ReservationImpossibleException(
@@ -46,7 +109,7 @@ class ReservationService
     /**
      * Réserve une place par passager et crée les tickets.
      *
-     * @param  array<int, array{nom: string, prenom?: ?string, telephone?: ?string}>  $passagers
+     * @param  array<int, array{nom: string, prenom?: ?string, telephone?: ?string, categorie?: string, age?: ?int}>  $passagers
      * @param  bool  $payeImmediatement  true = paiement déjà confirmé (simulation hors production)
      * @return Collection<int, Ticket>
      */
@@ -95,15 +158,16 @@ class ReservationService
                 );
             }
 
-            $voyage->loadMissing(['trajet.gareDepart', 'trajet.gareArrivee', 'vagueDepart', 'bus']);
+            $voyage->loadMissing(['trajet.gareDepart', 'trajet.gareArrivee', 'vagueDepart', 'bus', 'agence']);
+            $passagers = $this->normaliserPassagers($voyage, $passagers);
             $gareDepart  = $voyage->trajet?->gareDepart;
             $gareArrivee = $voyage->trajet?->gareArrivee;
             $vague       = $voyage->vagueDepart;
-            $prix        = (float) ($voyage->prix ?? 0);
             $maintenant  = now();
 
             $tickets = collect();
             foreach ($passagers as $passager) {
+                $prix = $this->prixPour($voyage, $passager['categorie']);
                 $tickets->push(Ticket::create([
                     'planification_voyage_id' => $voyage->id,
                     'agence_id'               => $voyage->agence_id,
@@ -115,6 +179,8 @@ class ReservationService
                     'nom_passager'       => $passager['nom'],
                     'prenom_passager'    => $passager['prenom'] ?? '',
                     'telephone_passager' => $passager['telephone'] ?? null,
+                    'categorie_passager' => $passager['categorie'],
+                    'age_passager'       => $passager['age'],
 
                     'ville_depart'    => $gareDepart?->ville ?? $voyage->trajet?->ville_depart,
                     'gare_depart_id'  => $gareDepart?->id,
@@ -178,6 +244,8 @@ class ReservationService
                 'statut_paiement'  => $t->statut_paiement,
                 'expire_le'        => $t->expire_le?->toIso8601String(),
                 'billet_test'      => PaiementService::estReferenceTest($t->reference_paiement),
+                'categorie'        => $t->categorie_passager ?? 'Adulte',
+                'age'              => $t->age_passager,
             ];
         })->values()->all();
     }

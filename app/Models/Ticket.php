@@ -24,6 +24,8 @@ class Ticket extends Model
         'nom_passager',
         'prenom_passager',
         'telephone_passager',     // ⬅️ NOUVEAU
+        'categorie_passager',     // Adulte / Enfant
+        'age_passager',           // âge déclaré pour un enfant
 
         // === Trajet figé au moment de la vente ===
         'ville_depart',

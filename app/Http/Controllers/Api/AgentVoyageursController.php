@@ -97,6 +97,8 @@ class AgentVoyageursController extends Controller
                 // Passager
                 'nom'               => $ticket->nom_passager,
                 'prenom'            => $ticket->prenom_passager,
+                'categorie'         => $ticket->categorie_passager ?? 'Adulte',
+                'age'               => $ticket->age_passager,
                 'telephone'         => $ticket->telephone_passager,
 
                 // Destination & Gares

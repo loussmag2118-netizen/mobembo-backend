@@ -173,6 +173,7 @@ Route::middleware(['auth', 'agence.active'])
             Route::post('/voyageurs/{id}/rembourser', [VoyageurController::class, 'rembourser'])->name('voyageurs.rembourser');
             Route::resource('voyageurs', VoyageurController::class)->except(['index', 'show']);
             Route::resource('statistiques', StatistiqueController::class);
+            Route::patch('/agence/age-enfant', [PlanificationVoyageController::class, 'majAgeEnfant'])->name('agence.age_enfant');
         });
 
         // --- Lecture : accessible aux agents (guichet / contrôle) et aux admins

@@ -224,6 +224,26 @@
                         <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+                <div class="space-y-2">
+                    <label class="block text-sm font-extrabold text-slate-900">
+                        Prix enfant (FCFA) (Optionnel)
+                    </label>
+                    <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-child text-base"></i>
+                        </div>
+                        <input type="number" step="0.01" name="prix_enfant" id="prix_enfant"
+                               value="{{ old('prix_enfant') }}" min="0"
+                               placeholder="Vide = même prix que l'adulte"
+                               class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all">
+                    </div>
+                    <p class="text-xs text-slate-400 font-semibold">
+                        Enfants jusqu'à {{ auth()->user()->agence?->age_max_enfant ?? 12 }} ans (réglage de l'agence dans la liste des planifications).
+                    </p>
+                    @error('prix_enfant')
+                        <p class="text-xs font-bold text-rose-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             {{-- BOUTONS D'ACTION --}}

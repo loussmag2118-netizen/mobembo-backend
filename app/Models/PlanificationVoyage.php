@@ -21,6 +21,7 @@ class PlanificationVoyage extends Model
         'nombre_tickets_total',
         'places_disponibles',
         'prix', // 👈 Ajouté ici pour autoriser l'enregistrement
+        'prix_enfant',   // null = même prix que l'adulte
         'statut_voyage',
     ];
 

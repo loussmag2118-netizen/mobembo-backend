@@ -59,6 +59,8 @@ class PaiementBusController extends Controller
             'passagers.*.nom'         => 'required|string|max:150',
             'passagers.*.prenom'      => 'nullable|string|max:150',
             'passagers.*.telephone'   => 'nullable|string|max:30',
+            'passagers.*.categorie'   => 'nullable|in:Adulte,Enfant',
+            'passagers.*.age'         => 'nullable|integer|min:0|max:17',
         ], ['phone.regex' => $messageTelephone]);
 
         if ($validator->fails()) {
@@ -105,7 +107,7 @@ class PaiementBusController extends Controller
         $montant   = (float) $request->amount;
 
         try {
-            $this->reservations->verifierMontant($voyage, count($passagers), $montant);
+            $this->reservations->verifierMontant($voyage, $passagers, $montant);
             $modeTest = $this->paiements->modeTest($operateur);
 
             // ---------------- MODE TEST (jamais en production sans PAIEMENT_MODE_TEST)

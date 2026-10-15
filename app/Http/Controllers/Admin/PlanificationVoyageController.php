@@ -48,6 +48,7 @@ class PlanificationVoyageController extends Controller
         $agenceNom = $request->query('agence');
 
         $query = PlanificationVoyage::with([
+            'agence',
             'trajet.gareDepart',
             'trajet.gareArrivee',
             'bus',
@@ -81,6 +82,8 @@ class PlanificationVoyageController extends Controller
                 'prix'                 => (float) ($p->prix ?? 0), // 👈 Transmission du prix défini par l'admin
                 'statut_voyage'        => $p->statut_voyage,
                 'agence_id'            => $p->agence_id,
+                'prix_enfant'          => $p->prix_enfant !== null ? (float) $p->prix_enfant : null, // null = prix adulte
+                'age_max_enfant'       => (int) ($p->agence?->age_max_enfant ?? 12),
                 'trajet' => $p->trajet ? [
                     'id'            => $p->trajet->id,
                     'ville_depart'  => $p->trajet->ville_depart,
@@ -180,6 +183,7 @@ class PlanificationVoyageController extends Controller
             ],
             'nombre_tickets_total' => 'nullable|integer|min:1',
             'prix'                 => 'required|numeric|min:0', // 👈 Validation du prix
+            'prix_enfant'          => 'nullable|numeric|min:0|lte:prix',
             'dates_voyage'         => 'required|string',
         ]);
 
@@ -233,6 +237,7 @@ class PlanificationVoyageController extends Controller
                 'nombre_tickets_total' => $nombreTickets,
                 'places_disponibles'   => $nombreTickets,
                 'prix'                 => $request->prix, // 👈 Enregistrement du prix
+                'prix_enfant'          => $request->filled('prix_enfant') ? $request->prix_enfant : null,
                 'statut_voyage'        => 'Programmation',
             ]);
 
@@ -337,6 +342,7 @@ class PlanificationVoyageController extends Controller
             ],
             'nombre_tickets_total' => 'nullable|integer|min:1',
             'prix'                 => 'required|numeric|min:0', // 👈 Validation du prix
+            'prix_enfant'          => 'nullable|numeric|min:0|lte:prix',
             'date_voyage'          => 'required|date',
             'statut_voyage'        => 'required|in:Programmation,En cours,Terminé,Annulé',
         ]);
@@ -360,6 +366,7 @@ class PlanificationVoyageController extends Controller
                 'date_voyage'          => $request->date_voyage,
                 'nombre_tickets_total' => $nombreTicketsTotal,
                 'prix'                 => $request->prix, // 👈 Mise à jour du prix
+                'prix_enfant'          => $request->filled('prix_enfant') ? $request->prix_enfant : null,
                 'statut_voyage'        => $request->statut_voyage,
             ]);
 
@@ -392,5 +399,21 @@ class PlanificationVoyageController extends Controller
             403,
             'Accès non autorisé à cette planification de voyage.'
         );
+    }
+
+    /**
+     * Âge maximum « enfant » de l'agence (prix enfant des départs).
+     */
+    public function majAgeEnfant(Request $request)
+    {
+        $request->validate(['age_max_enfant' => 'required|integer|min:1|max:17']);
+
+        $agence = Auth::user()->agence;
+        abort_unless($agence, 403);
+
+        $agence->update(['age_max_enfant' => (int) $request->age_max_enfant]);
+        \App\Support\Audit::log('agence.age_max_enfant', $agence, ['age_max_enfant' => (int) $request->age_max_enfant]);
+
+        return back()->with('success', "Tarif enfant : jusqu'à {$agence->age_max_enfant} ans.");
     }
 }

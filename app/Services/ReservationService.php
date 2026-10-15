@@ -169,6 +169,9 @@ class ReservationService
             if ($voyage->date_voyage && $voyage->date_voyage_carbon?->copy()->endOfDay()->isPast()) {
                 throw new ReservationImpossibleException('Ce départ est déjà passé.');
             }
+            if ($this->departParti($voyage)) {
+                throw new ReservationImpossibleException("Ce bus est déjà parti : l'heure de départ est passée.");
+            }
 
             // Libère d'abord les réservations expirées de ce départ
             $this->expirerTicketsDuVoyage($voyage);
@@ -466,6 +469,44 @@ class ReservationService
             $voyage->places_disponibles = $places;
             $voyage->saveQuietly();
         }
+    }
+
+    /** Le départ du jour a-t-il déjà quitté l'agence (heure de départ passée) ? */
+    public function departParti(PlanificationVoyage $voyage): bool
+    {
+        $voyage->loadMissing('vagueDepart');
+        $date = $voyage->date_voyage_carbon;
+        $heure = $voyage->vagueDepart?->heure_depart;
+        if (! $date || ! $heure) {
+            return false;
+        }
+
+        return \Illuminate\Support\Carbon::parse($date->toDateString() . ' ' . $heure)->isPast();
+    }
+
+    /**
+     * Places occupées d'un départ (billets payés et réservations en cours)
+     * et plus grand numéro de siège occupé.
+     *
+     * @return array{places: int, siege_max: int}
+     */
+    public function occupation(PlanificationVoyage $voyage): array
+    {
+        $actifs = Ticket::where('planification_voyage_id', $voyage->id)
+            ->where(function ($q) {
+                $q->where('statut_paiement', 'Paye')
+                  ->orWhere(function ($q) {
+                      $q->where('statut_paiement', 'En_Attente')
+                        ->where(function ($q) {
+                            $q->whereNull('expire_le')->orWhere('expire_le', '>=', now());
+                        });
+                  });
+            });
+
+        return [
+            'places'    => (int) (clone $actifs)->sum('nombre_places_reservees'),
+            'siege_max' => (int) (clone $actifs)->max('numero_siege'),
+        ];
     }
 
     /** Capacité du départ : quota de tickets s'il est fixé, sinon capacité du bus. */

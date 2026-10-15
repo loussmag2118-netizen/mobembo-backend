@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PlanificationVoyage;
+use App\Support\Audit;
+use App\Models\Ticket;
 use App\Models\Trajet;
 use App\Models\Bus;
 use App\Models\VagueDepart;
@@ -54,7 +56,9 @@ class PlanificationVoyageController extends Controller
             'bus',
             'vagueDepart',
         ])
-        ->where('statut_voyage', '!=', 'Annulé');
+        // Seuls les départs encore réservables : ouverts et pas encore passés
+        ->where('statut_voyage', 'Programmation')
+        ->whereDate('date_voyage', '>=', today());
 
         // Filtrer par agence si le paramètre est fourni
         if ($agenceNom) {
@@ -71,7 +75,10 @@ class PlanificationVoyageController extends Controller
             }
         }
 
-        $planifications = $query->orderBy('date_voyage')->get();
+        $planifications = $query->orderBy('date_voyage')->get()
+            // Départ du jour dont le bus est déjà parti : plus proposé
+            ->reject(fn (PlanificationVoyage $p) => $reservations->departParti($p))
+            ->values();
 
         $data = $planifications->map(function ($p) {
             return [
@@ -183,7 +190,7 @@ class PlanificationVoyageController extends Controller
                 },
             ],
             'nombre_tickets_total' => 'nullable|integer|min:1',
-            'prix'                 => 'required|numeric|min:0', // 👈 Validation du prix
+            'prix'                 => 'required|numeric|min:1', // Mobile Money n'encaisse pas 0
             'prix_enfant'          => 'nullable|numeric|min:0|lte:prix',
             'dates_voyage'         => 'required|string',
         ]);
@@ -194,6 +201,10 @@ class PlanificationVoyageController extends Controller
         $nombreTickets = $request->filled('nombre_tickets_total') 
             ? (int) $request->nombre_tickets_total 
             : $capaciteBus;
+
+        if ($nombreTickets > $capaciteBus) {
+            return back()->withErrors(['nombre_tickets_total' => "Ce bus n'a que {$capaciteBus} places : impossible de vendre {$nombreTickets} billets."])->withInput();
+        }
 
         $dates = array_filter(array_map('trim', explode(',', $request->dates_voyage)));
 
@@ -342,7 +353,7 @@ class PlanificationVoyageController extends Controller
                 },
             ],
             'nombre_tickets_total' => 'nullable|integer|min:1',
-            'prix'                 => 'required|numeric|min:0', // 👈 Validation du prix
+            'prix'                 => 'required|numeric|min:1', // Mobile Money n'encaisse pas 0
             'prix_enfant'          => 'nullable|numeric|min:0|lte:prix',
             'date_voyage'          => 'required|date',
             'statut_voyage'        => 'required|in:Programmation,En cours,Terminé,Annulé',
@@ -353,7 +364,27 @@ class PlanificationVoyageController extends Controller
 
         $nombreTicketsTotal = $request->filled('nombre_tickets_total') 
             ? (int) $request->nombre_tickets_total 
-            : ($planificationVoyage->nombre_tickets_total ?? $capaciteBus);
+            : min($planificationVoyage->nombre_tickets_total ?? $capaciteBus, $capaciteBus);
+
+        if ($nombreTicketsTotal > $capaciteBus) {
+            return back()->withErrors(['nombre_tickets_total' => "Ce bus n'a que {$capaciteBus} places : impossible de vendre {$nombreTicketsTotal} billets."])->withInput();
+        }
+
+        $reservations = app(ReservationService::class);
+        $occupation = $reservations->occupation($planificationVoyage);
+
+        // Des clients ont déjà leur place : on ne peut pas la leur retirer
+        if ($occupation['places'] > 0) {
+            if ((int) $request->trajet_id !== (int) $planificationVoyage->trajet_id) {
+                return back()->withErrors(['trajet_id' => "{$occupation['places']} billet(s) déjà vendu(s) pour ce trajet : le trajet ne peut plus être changé. Annulez ce départ et créez-en un autre."])->withInput();
+            }
+            if ($nombreTicketsTotal < $occupation['places']) {
+                return back()->withErrors(['nombre_tickets_total' => "{$occupation['places']} place(s) déjà vendue(s) ou réservée(s) : le départ doit garder au moins {$occupation['places']} places."])->withInput();
+            }
+            if ($occupation['siege_max'] > $nombreTicketsTotal) {
+                return back()->withErrors(['bus_id' => "Le siège n°{$occupation['siege_max']} est déjà vendu : ce départ doit garder au moins {$occupation['siege_max']} places (bus plus grand ou même bus)."])->withInput();
+            }
+        }
 
         // Places restantes recalculées à partir des tickets qui occupent
         // réellement une place (payés ou réservés non expirés)
@@ -371,8 +402,27 @@ class PlanificationVoyageController extends Controller
                 'statut_voyage'        => $request->statut_voyage,
             ]);
 
-            app(ReservationService::class)->recalculerPlaces($voyage->fresh());
+            // Billets déjà vendus : bus et horaire mis à jour (ils sont imprimés sur le billet)
+            $voyage = $voyage->fresh(['bus', 'vagueDepart']);
+            Ticket::where('planification_voyage_id', $voyage->id)
+                ->whereIn('statut_paiement', ['Paye', 'En_Attente'])
+                ->update([
+                    'numero_bus' => $voyage->bus?->immatriculation,
+                    'horaire'    => $voyage->vagueDepart?->heure_depart,
+                    'nom_vague'  => $voyage->vagueDepart?->nom_vague,
+                ]);
+
+            app(ReservationService::class)->recalculerPlaces($voyage);
         });
+
+        $payes = Ticket::where('planification_voyage_id', $planificationVoyage->id)->where('statut_paiement', 'Paye')->count();
+        if ($request->statut_voyage === 'Annulé' && $payes > 0) {
+            Audit::log('admin.depart.annule_avec_billets', $planificationVoyage, ['billets_payes' => $payes]);
+
+            return redirect()
+                ->route('admin.planifications.index')
+                ->with('success', "Départ annulé. Attention : {$payes} billet(s) payé(s) à rembourser ou à reporter sur un autre départ.");
+        }
 
         return redirect()
             ->route('admin.planifications.index')
@@ -385,6 +435,11 @@ class PlanificationVoyageController extends Controller
     public function destroy(PlanificationVoyage $planificationVoyage)
     {
         $this->authorizeAgence($planificationVoyage);
+
+        $occupees = app(ReservationService::class)->occupation($planificationVoyage)['places'];
+        if ($occupees > 0) {
+            return back()->with('error', "Ce départ a {$occupees} billet(s) payé(s) ou réservé(s) : il ne peut pas être supprimé. Passez-le en « Annulé » pour arrêter les ventes, puis remboursez les clients.");
+        }
 
         $planificationVoyage->delete();
 

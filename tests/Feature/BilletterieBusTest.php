@@ -293,7 +293,8 @@ class BilletterieBusTest extends TestCase
         $ticket = Ticket::first();
         $this->assertTrue(PaiementService::estReferenceTest($ticket->reference_paiement));
 
-        // Mode test retiré : le billet de test ne permet pas d'embarquer
+        // Jour du départ, mode test retiré : le billet de test ne permet pas d'embarquer
+        DB::table('planification_voyages')->where('id', $depart->id)->update(['date_voyage' => today()->toDateString()]);
         config(['paiement.mode_test_production' => false]);
         Sanctum::actingAs($this->personnel('Agent', $depart->agence_id));
         $this->postJson('/api/agent/update-presence', ['ticket_id' => $ticket->id, 'present' => true])
@@ -323,6 +324,8 @@ class BilletterieBusTest extends TestCase
     {
         $depart = $this->creerDepart();
         $ticket = $this->reservations->reserver($depart->id, $this->passagers(1), 'MTN', 'REF-OK', payeImmediatement: true)->first();
+        // Jour du départ
+        DB::table('planification_voyages')->where('id', $depart->id)->update(['date_voyage' => today()->toDateString()]);
         Sanctum::actingAs($this->personnel('Agent', $depart->agence_id));
 
         $this->getJson('/api/agent/ticket/' . urlencode('MBL:' . $ticket->qr_code_token))

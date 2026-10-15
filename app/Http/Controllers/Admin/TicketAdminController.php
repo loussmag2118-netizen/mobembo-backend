@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
+use App\Support\Embarquement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -88,8 +89,8 @@ class TicketAdminController extends Controller
             return response()->json(['success' => false, 'message' => 'Ticket invalide ou introuvable.'], 404);
         }
 
-        if ($request->statut_embarquement === 'Present' && $ticket->statut_paiement !== 'Paye') {
-            return response()->json(['success' => false, 'message' => 'Billet non payé : embarquement refusé.'], 409);
+        if ($request->statut_embarquement === 'Present' && ($motif = Embarquement::motifRefus($ticket))) {
+            return response()->json(['success' => false, 'message' => $motif['message'], 'code' => $motif['code']], 409);
         }
 
         if ($ticket->statut_embarquement === 'Present' && $request->statut_embarquement === 'Present') {

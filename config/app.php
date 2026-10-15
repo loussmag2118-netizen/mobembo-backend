@@ -13,7 +13,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
-    'timezone' => 'UTC',
+    // Heure du Congo (UTC+1) : départs du jour, expiration des réservations…
+    'timezone' => env('APP_TIMEZONE', 'Africa/Brazzaville'),
 
     'locale' => env('APP_LOCALE', 'en'),
 

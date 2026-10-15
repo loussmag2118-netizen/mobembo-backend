@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
+use App\Support\Embarquement;
 use App\Services\PaiementService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -236,30 +237,10 @@ class AgentPresenceController extends Controller
         return $autorise ? $agent : null;
     }
 
-    /**
-     * Raison pour laquelle le billet ne permet pas d'embarquer, ou null.
-     *
-     * @return array{code: string, message: string}|null
-     */
+    /** Raison pour laquelle le billet ne permet pas d'embarquer, ou null. */
     private function motifRefus(Ticket $ticket): ?array
     {
-        if ($ticket->statut_paiement !== 'Paye') {
-            return [
-                'code'    => 'NON_PAYE',
-                'message' => match ($ticket->statut_paiement) {
-                    'En_Attente' => 'Billet non payé (paiement en attente) : embarquement refusé.',
-                    'Rembourse'  => 'Billet remboursé : embarquement refusé.',
-                    default      => 'Billet non valable (paiement échoué) : embarquement refusé.',
-                },
-            ];
-        }
-
-        if (PaiementService::estReferenceTest($ticket->reference_paiement)
-            && app()->environment('production') && ! config('paiement.mode_test_production')) {
-            return ['code' => 'BILLET_TEST', 'message' => "Billet de TEST : il n'est pas valable pour voyager."];
-        }
-
-        return null;
+        return Embarquement::motifRefus($ticket);
     }
 
     /** Trace chaque contrôle (accepté ou refusé) dans ticket_validations. */

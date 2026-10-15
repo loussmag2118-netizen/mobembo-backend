@@ -36,7 +36,7 @@ return [
         'verify_sid' => env('TWILIO_VERIFY_SID'),
         'from'       => env('TWILIO_FROM'),
         // Message du code reçu par SMS (Twilio Verify)
-        'verify_nom'          => env('TWILIO_VERIFY_NOM', 'Mobembo Line'),   // nom affiché dans le SMS (30 caractères max)
+        'verify_nom'          => env('TWILIO_VERIFY_NOM'),   // nom personnalisé (si le compte Twilio l'autorise), 30 caractères max
         'verify_locale'       => env('TWILIO_VERIFY_LOCALE', 'fr'),
         'verify_template_sid' => env('TWILIO_VERIFY_TEMPLATE_SID'),         // modèle personnalisé approuvé par Twilio (HJ…)
     ],

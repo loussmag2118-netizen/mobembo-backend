@@ -39,10 +39,18 @@ class TwilioVerifyService
         }
 
         try {
-            $verification = $this->client->verify->v2
-                ->services($this->verifySid)
-                ->verifications
-                ->create($phoneNumber, 'sms', $this->optionsSms());
+            try {
+                $verification = $this->creerVerification($phoneNumber, $this->optionsSms());
+            } catch (TwilioException $e) {
+                // Option refusée par le compte Twilio (ex. 60204 « Custom friendly
+                // name not allowed ») : on renvoie le code sans personnalisation
+                // plutôt que de bloquer l'inscription.
+                if (! in_array($e->getCode(), [60200, 60204, 60205], true)) {
+                    throw $e;
+                }
+                Log::warning('Twilio : personnalisation du SMS refusée, envoi standard', ['code' => $e->getCode(), 'message' => $e->getMessage()]);
+                $verification = $this->creerVerification($phoneNumber, []);
+            }
 
             return [
                 'success' => true,
@@ -70,19 +78,31 @@ class TwilioVerifyService
         }
     }
 
+    private function creerVerification(string $phoneNumber, array $options)
+    {
+        return $this->client->verify->v2
+            ->services($this->verifySid)
+            ->verifications
+            ->create($phoneNumber, 'sms', $options);
+    }
+
     /**
      * Personnalisation du SMS envoyé par Twilio Verify :
-     *  - en français, au nom de « Mobembo Line » :
-     *    « Votre code de vérification Mobembo Line est : 123456 » ;
-     *  - avec un modèle de message personnalisé (approuvé par Twilio,
+     *  - en français : « Votre code de vérification <nom du service> est : 123456 »
+     *    (le nom est celui du service Verify dans la console Twilio) ;
+     *  - nom personnalisé (TWILIO_VERIFY_NOM) seulement si le compte Twilio
+     *    l'autorise ;
+     *  - modèle de message personnalisé (approuvé par Twilio,
      *    TWILIO_VERIFY_TEMPLATE_SID) s'il est configuré.
      */
     public function optionsSms(): array
     {
-        $options = [
-            'locale'             => config('services.twilio.verify_locale', 'fr'),
-            'customFriendlyName' => mb_substr((string) config('services.twilio.verify_nom', 'Mobembo Line'), 0, 30),
-        ];
+        $options = ['locale' => config('services.twilio.verify_locale', 'fr')];
+
+        $nom = config('services.twilio.verify_nom');
+        if (! empty($nom)) {
+            $options['customFriendlyName'] = mb_substr((string) $nom, 0, 30);
+        }
 
         $modele = config('services.twilio.verify_template_sid');
         if (! empty($modele)) {

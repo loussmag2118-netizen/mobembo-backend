@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "public": "hosting",
+    "ignore": ["**/.*"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": { "serviceId": "mobembo-api", "region": "us-east1" }
+      }
+    ]
+  }
+}

@@ -24,7 +24,8 @@ class AgentVoyageursController extends Controller
         // ============================================================
         // SÉCURITÉ : Vérifier que l'agent a bien une agence
         // ============================================================
-        if (!$agent || !$agent->agence_id || !in_array($agent->role, ['Agent', 'Admin'], true)) {
+        if (!$agent || !$agent->agence_id || !in_array($agent->role, ['Agent', 'Admin'], true)
+            || strtolower((string) $agent->statut) !== 'actif' || $agent->agence?->statut !== 'Actif') {
             return response()->json([
                 'message' => 'Utilisateur non autorisé ou sans agence assignée.',
             ], 403);

@@ -145,7 +145,7 @@
                 <i class="fa-solid fa-lock text-emerald-600 text-lg mt-0.5 shrink-0"></i>
                 <div class="text-xs leading-relaxed">
                     <span class="font-extrabold">Mot de passe temporaire :</span> 
-                    Un mot de passe par défaut sécurisé (<span class="font-mono font-bold bg-white px-2 py-0.5 rounded-md border border-emerald-200">Mobembo2026</span>) sera attribué automatiquement à l'agent lors de sa première connexion à l'application mobile.
+                    Un mot de passe temporaire unique est généré et vous sera affiché <b>une seule fois</b> après la création. Transmettez-le à l'agent de façon confidentielle.
                 </div>
             </div>
 

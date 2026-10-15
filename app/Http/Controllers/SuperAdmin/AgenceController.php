@@ -5,9 +5,12 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Utilisateur;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AgenceController extends Controller
 {
@@ -38,14 +41,16 @@ class AgenceController extends Controller
     }
 
     /**
-     * Enregistrer une nouvelle agence ET créer automatiquement son compte Admin.
+     * Enregistrer une nouvelle agence ET créer son compte Admin, ensemble :
+     * si la création de l'admin échoue, l'agence n'est pas créée non plus.
      */
     public function store(Request $request)
     {
         $request->validate([
             'nom_agence'       => 'required|string|max:100|unique:agences,nom_agence',
             'date_partenariat' => 'required|date',
-            'admin_telephone'  => 'required|string|regex:/^(05|06)\d{7}$/|unique:utilisateurs,telephone',
+            // Liste de règles : le « | » de l'expression ne doit pas séparer les règles
+            'admin_telephone'  => ['required', 'string', 'regex:/^(05|06)\d{7}$/', 'unique:utilisateurs,telephone'],
             'admin_nom'        => 'required|string|max:100',
             'admin_prenom'     => 'required|string|max:100',
             'admin_password'   => 'required|string|min:8',
@@ -56,30 +61,110 @@ class AgenceController extends Controller
             'admin_password.min'       => 'Le mot de passe doit avoir au moins 8 caractères.',
         ]);
 
-        // 1️⃣ Créer l'agence
-        $agence = Agence::create([
-            'nom_agence'       => $request->nom_agence,
-            'statut'           => 'Actif',
-            'date_partenariat' => $request->date_partenariat,
-            'superadmin_id'    => Auth::id(),
-        ]);
+        $agence = DB::transaction(function () use ($request) {
+            $agence = Agence::create([
+                'nom_agence'       => $request->nom_agence,
+                'statut'           => 'Actif',
+                'date_partenariat' => $request->date_partenariat,
+                'superadmin_id'    => Auth::id(),
+            ]);
 
-        // 2️⃣ Créer automatiquement le compte Admin de l'agence
-        Utilisateur::create([
-            'agence_id'        => $agence->id,
-            'nom'              => $request->admin_nom,
-            'prenom'           => $request->admin_prenom,
-            'telephone'        => $request->admin_telephone,
-            'role'             => 'Admin',
-            'mot_de_passe'     => Hash::make($request->admin_password),
-            'code_acces_agent' => null,
-            'statut'           => 'Actif',
-            'compte_confirme'  => true,
-        ]);
+            $this->creerAdmin($agence, $request->admin_nom, $request->admin_prenom, $request->admin_telephone, $request->admin_password);
+
+            return $agence;
+        });
+
+        Audit::log('superadmin.agence.creee', $agence, ['nom' => $agence->nom_agence, 'admin' => $request->admin_telephone]);
 
         return redirect()
             ->route('superadmin.agences.index')
             ->with('success', "Agence « {$agence->nom_agence} » créée avec succès. Le compte Admin a été configuré.");
+    }
+
+    /**
+     * Fiche d'une agence : réglages et comptes administrateurs.
+     */
+    public function show(Agence $agence)
+    {
+        $agence->loadCount([
+            'utilisateurs as agents_count' => fn ($q) => $q->where('role', 'Agent'),
+            'bus', 'gares', 'trajets',
+        ]);
+        $admins = Utilisateur::where('agence_id', $agence->id)->where('role', 'Admin')->orderBy('nom')->get();
+
+        return view('superadmin.agences.show', compact('agence', 'admins'));
+    }
+
+    /**
+     * Modifier les réglages d'une agence.
+     */
+    public function update(Request $request, Agence $agence)
+    {
+        $donnees = $request->validate([
+            'nom_agence'       => ['required', 'string', 'max:100', Rule::unique('agences', 'nom_agence')->ignore($agence->id)],
+            'date_partenariat' => 'required|date',
+            'age_max_enfant'   => 'required|integer|min:1|max:17',
+        ]);
+        $donnees['choix_siege'] = $request->boolean('choix_siege');
+
+        $avant = $agence->only(array_keys($donnees));
+        $agence->update($donnees);
+        Audit::log('superadmin.agence.modifiee', $agence, ['avant' => $avant, 'apres' => $agence->only(array_keys($donnees))]);
+
+        return back()->with('success', "Les réglages de « {$agence->nom_agence} » ont été enregistrés.");
+    }
+
+    /**
+     * Ajouter un administrateur à une agence (mot de passe temporaire).
+     */
+    public function ajouterAdmin(Request $request, Agence $agence)
+    {
+        $request->validate([
+            'nom'       => 'required|string|max:100',
+            'prenom'    => 'required|string|max:100',
+            'telephone' => ['required', 'string', 'regex:/^(05|06)\d{7}$/', 'unique:utilisateurs,telephone'],
+        ], [
+            'telephone.unique' => 'Ce numéro de téléphone est déjà utilisé.',
+            'telephone.regex'  => 'Le numéro doit commencer par 05 ou 06 et avoir 9 chiffres.',
+        ]);
+
+        $motDePasse = self::motDePasseTemporaire();
+        $admin = $this->creerAdmin($agence, $request->nom, $request->prenom, $request->telephone, $motDePasse);
+        Audit::log('superadmin.admin.ajoute', $admin, ['telephone' => $admin->telephone], $agence->id);
+
+        return back()
+            ->with('success', "Administrateur {$admin->prenom} {$admin->nom} ajouté.")
+            ->with('mot_de_passe_temporaire', ['compte' => "{$admin->prenom} {$admin->nom} ({$admin->telephone})", 'mot_de_passe' => $motDePasse]);
+    }
+
+    /**
+     * Réinitialiser le mot de passe d'un administrateur d'agence.
+     */
+    public function reinitialiserAdmin(Agence $agence, Utilisateur $admin)
+    {
+        abort_unless((int) $admin->agence_id === (int) $agence->id && $admin->role === 'Admin', 404);
+
+        $motDePasse = self::motDePasseTemporaire();
+        $admin->update(['mot_de_passe' => Hash::make($motDePasse)]);
+        Audit::log('superadmin.admin.mot_de_passe_reinitialise', $admin, ['telephone' => $admin->telephone], $agence->id);
+
+        return back()->with('mot_de_passe_temporaire', [
+            'compte' => "{$admin->prenom} {$admin->nom} ({$admin->telephone})",
+            'mot_de_passe' => $motDePasse,
+        ]);
+    }
+
+    /**
+     * Activer / suspendre un administrateur d'agence.
+     */
+    public function basculerAdmin(Agence $agence, Utilisateur $admin)
+    {
+        abort_unless((int) $admin->agence_id === (int) $agence->id && $admin->role === 'Admin', 404);
+
+        $admin->update(['statut' => $admin->statut === 'actif' ? 'suspendu' : 'actif']);
+        Audit::log('superadmin.admin.statut', $admin, ['statut' => $admin->statut], $agence->id);
+
+        return back()->with('success', "Le compte de {$admin->prenom} {$admin->nom} est maintenant " . ($admin->statut === 'actif' ? 'actif.' : 'suspendu.'));
     }
 
     /**
@@ -89,9 +174,39 @@ class AgenceController extends Controller
     {
         $agence->statut = $agence->statut === 'Actif' ? 'Bloqué' : 'Actif';
         $agence->save();
+        Audit::log('superadmin.agence.statut', $agence, ['statut' => $agence->statut]);
 
         return redirect()
-            ->route('superadmin.agences.index')
-            ->with('success', "Le statut de l'agence {$agence->nom_agence} a été mis à jour.");
+            ->back()
+            ->with('success', "Le statut de l'agence {$agence->nom_agence} a été mis à jour : {$agence->statut}.");
+    }
+
+    // ------------------------------------------------------------------
+
+    private function creerAdmin(Agence $agence, string $nom, string $prenom, string $telephone, string $motDePasse): Utilisateur
+    {
+        return Utilisateur::create([
+            'agence_id'        => $agence->id,
+            'nom'              => $nom,
+            'prenom'           => $prenom,
+            'telephone'        => $telephone,
+            'role'             => 'Admin',
+            'mot_de_passe'     => Hash::make($motDePasse),
+            'code_acces_agent' => null,
+            'statut'           => 'actif',
+            'compte_confirme'  => true,
+        ]);
+    }
+
+    /** Mot de passe temporaire lisible (sans caractères ambigus). */
+    public static function motDePasseTemporaire(): string
+    {
+        $alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        $mdp = '';
+        for ($i = 0; $i < 10; $i++) {
+            $mdp .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+
+        return $mdp;
     }
 }

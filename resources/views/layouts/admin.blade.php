@@ -1,24 +1,31 @@
 @php
-    $isCanadian = request()->is('canadian*');
-    
-    $user = $isCanadian 
-        ? Auth::guard('canadian')->user() 
-        : Auth::user();
-    
-    $agenceNom = $user?->agence?->nom_agence ?? ($isCanadian ? 'Canadian Airways' : 'Mobembo Line');
+    $isCanadian   = request()->is('canadian*');
+    $isSuperAdmin = request()->is('superadmin*');
+
+    $user = $isSuperAdmin
+        ? Auth::guard('superadmin')->user()
+        : ($isCanadian ? Auth::guard('canadian')->user() : Auth::user());
+
+    $agenceNom = $isSuperAdmin
+        ? 'Super administration'
+        : ($user?->agence?->nom_agence ?? ($isCanadian ? 'Canadian Airways' : 'Mobembo Line'));
     $userEmail = $user?->email ?? ($user?->telephone ? $user?->telephone : 'admin@mobemboline.com');
     $userNomComplet = trim(($user?->prenom ?? $user?->name ?? 'Admin') . ' ' . ($user?->nom ?? ''));
     if (empty($userNomComplet)) $userNomComplet = 'Admin';
 
     $userInitiales = strtoupper(substr($user?->prenom ?? $user?->name ?? 'A', 0, 1) . substr($user?->nom ?? '', 0, 1));
     if (empty(trim($userInitiales))) $userInitiales = 'MB';
+
+    // Libellé du rôle affiché dans la barre latérale
+    $roleLibelle = $isSuperAdmin ? 'Super administrateur'
+        : ($isCanadian ? 'Administrateur' : (($user?->role ?? null) === 'Agent' ? 'Agent' : 'Administrateur'));
 @endphp
 <!DOCTYPE html>
 <html lang="fr" class="h-full bg-[#F4F5F7] dark:bg-[#0B131E]" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $isCanadian ? 'Canadian Airways' : $agenceNom }} — Portail Administrateur</title>
+    <title>@hasSection('title')@yield('title') — @endif{{ $isCanadian ? 'Canadian Airways' : $agenceNom }} — Portail Administrateur</title>
     
     {{-- Anti-FOUC Script pour le Thème Sombre / Clair Immédiat --}}
     <script>
@@ -78,6 +85,8 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
         
+        .card-hover { transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -10px rgba(15,23,42,.08); }
         html.dark {
             color-scheme: dark;
         }
@@ -279,7 +288,78 @@
         <!-- Navigation Scrollable Raffinée -->
         <nav class="flex-1 px-3 py-5 space-y-6 overflow-y-auto overflow-x-hidden">
             
-            @if($isCanadian)
+            @if($isSuperAdmin)
+                {{-- MENU SUPER ADMINISTRATION (réseau national) --}}
+                <div>
+                    <div x-show="!sidebarCollapsed" class="px-3 flex items-center justify-between mb-3">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Réseau national</span>
+                        <span class="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full">Super admin</span>
+                    </div>
+                    <div x-show="sidebarCollapsed" class="w-8 h-0.5 bg-slate-200 dark:bg-slate-800 mx-auto my-3 rounded-full"></div>
+                    <div class="space-y-1.5">
+                        <div class="relative group">
+                            <a href="{{ route('superadmin.dashboard') }}"
+                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.dashboard') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.dashboard') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        <i class="fa-solid fa-gauge-high"></i>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Tableau de bord</span>
+                                </div>
+                            </a>
+                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                Tableau de bord
+                            </div>
+                        </div>
+                        <div class="relative group">
+                            <a href="{{ route('superadmin.agences.index') }}"
+                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.agences.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.agences.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        <i class="fa-solid fa-building-shield"></i>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Agences partenaires</span>
+                                </div>
+                            </a>
+                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                Agences partenaires
+                            </div>
+                        </div>
+                        <div class="relative group">
+                            <a href="{{ route('superadmin.villes.index') }}"
+                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.villes.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.villes.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        <i class="fa-solid fa-city"></i>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Villes desservies</span>
+                                </div>
+                            </a>
+                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                Villes desservies
+                            </div>
+                        </div>
+                        <div class="relative group">
+                            <a href="{{ route('superadmin.journal') }}"
+                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.journal') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.journal') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Journal d'audit</span>
+                                </div>
+                            </a>
+                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                Journal d'audit
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @elseif($isCanadian)
                 {{-- MENU AVIATION --}}
                 <div>
                     <div x-show="!sidebarCollapsed" class="px-3 flex items-center justify-between mb-2.5">
@@ -599,7 +679,7 @@
                     </div>
                     <div class="overflow-hidden">
                         <p class="text-sm font-extrabold text-slate-900 dark:text-white truncate leading-tight">{{ $userNomComplet }}</p>
-                        <p class="text-xs text-slate-400 truncate font-semibold mt-0.5">Administrateur</p>
+                        <p class="text-xs text-slate-400 truncate font-semibold mt-0.5">{{ $roleLibelle }}</p>
                     </div>
                 </div>
 
@@ -656,7 +736,7 @@
                 <div class="relative w-full">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400 text-sm"></i>
                     <input type="text" 
-                           placeholder="Rechercher un bus, trajet, agent ou billet..." 
+                           placeholder="{{ $isSuperAdmin ? 'Rechercher dans la page…' : 'Rechercher un bus, trajet, agent ou billet...' }}" 
                            class="w-full pl-11 pr-12 py-2.5 h-11 bg-white dark:bg-[#121D2B] border border-slate-200/80 dark:border-slate-800 rounded-full text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#124231] transition-all">
                     <span class="absolute right-3.5 top-2.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-400 border border-slate-200 dark:border-slate-700">
                         ⌘K
@@ -695,7 +775,7 @@
 
                 <!-- Avatar Administrateur Direct -->
                 <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-600 text-slate-950 font-black text-sm flex items-center justify-center shadow-sm border border-amber-300"
-                     title="{{ $userNomComplet }} (Administrateur)">
+                     title="{{ $userNomComplet }} ({{ $roleLibelle }})">
                     {{ $userInitiales }}
                 </div>
             </div>
@@ -720,6 +800,18 @@
                         <i class="fa-solid fa-triangle-exclamation text-rose-600 dark:text-rose-400 text-lg"></i>
                         <span class="text-xs font-bold">{{ session('error') }}</span>
                     </div>
+                </div>
+            @endif
+
+            @hasSection('header_title')
+                <div class="mb-7">
+                    <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        <i class="fa-solid @yield('header_icon', 'fa-shield-halved') text-emerald-600"></i>
+                        <span>@yield('header_title')</span>
+                    </h1>
+                    @hasSection('header_subtitle')
+                        <p class="text-sm text-slate-500 font-semibold mt-1">@yield('header_subtitle')</p>
+                    @endif
                 </div>
             @endif
 

@@ -1,4 +1,4 @@
-@extends('superadmin.layout')
+@extends('layouts.admin')
 
 @section('title', 'Agences Partenaires')
 @section('header_icon', 'fa-shield-halved')
@@ -28,7 +28,7 @@
                 <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Agences Partenaires</span>
-                        <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
                             <i class="fa-solid fa-building"></i>
                         </div>
                     </div>
@@ -76,7 +76,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-plus-circle text-amber-500"></i>
+                            <i class="fa-solid fa-plus-circle text-emerald-600"></i>
                             <span>Nouvelle Agence Partenaire</span>
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">
@@ -87,7 +87,7 @@
                     <button @click="formOpen = !formOpen" 
                             type="button"
                             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition-all shadow-sm"
-                            :class="formOpen ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 text-amber-400 hover:bg-slate-800'">
+                            :class="formOpen ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-[#124231] text-white hover:bg-[#0c2f23]'">
                         <i :class="formOpen ? 'fa-solid fa-chevron-up' : 'fa-solid fa-plus'"></i>
                         <span x-text="formOpen ? 'Masquer le formulaire' : '+ Enregistrer une agence'"></span>
                     </button>
@@ -107,12 +107,12 @@
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom de l'agence <span class="text-red-500">*</span></label>
                                     <input type="text" name="nom_agence" value="{{ old('nom_agence') }}" required placeholder="Ex: Mikalou Express" 
-                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Date de partenariat <span class="text-red-500">*</span></label>
                                     <input type="date" name="date_partenariat" value="{{ old('date_partenariat', date('Y-m-d')) }}" required 
-                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                 </div>
                             </div>
                         </div>
@@ -126,23 +126,23 @@
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom de l'admin <span class="text-red-500">*</span></label>
                                     <input type="text" name="admin_nom" value="{{ old('admin_nom') }}" required placeholder="Ex: Moukala" 
-                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Prénom de l'admin <span class="text-red-500">*</span></label>
                                     <input type="text" name="admin_prenom" value="{{ old('admin_prenom') }}" required placeholder="Ex: Jean" 
-                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Téléphone de connexion <span class="text-red-500">*</span></label>
                                     <input type="text" name="admin_telephone" value="{{ old('admin_telephone') }}" required placeholder="Ex: 061234567" 
-                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                     <span class="text-[11px] text-slate-400 mt-1 block">Format : 05 ou 06 suivi de 7 chiffres</span>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Mot de passe initial <span class="text-red-500">*</span></label>
                                     <input type="password" name="admin_password" required placeholder="Au moins 8 caractères" 
-                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                     <span class="text-[11px] text-slate-400 mt-1 block">Min. 8 caractères sécurisés</span>
                                 </div>
                             </div>
@@ -150,8 +150,8 @@
 
                         <div class="flex justify-end pt-3">
                             <button type="submit" 
-                                    class="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold py-3 px-7 rounded-2xl shadow-lg shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-plus-circle text-amber-400"></i>
+                                    class="bg-[#124231] hover:bg-[#0c2f23] text-white font-bold py-3 px-7 rounded-2xl shadow-lg shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-plus-circle text-white"></i>
                                 <span>Créer l'Agence et Activer le Compte Admin</span>
                             </button>
                         </div>
@@ -176,7 +176,7 @@
                         <input type="text" 
                                x-model="searchQuery" 
                                placeholder="Rechercher une agence..." 
-                               class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                               class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                     </div>
                 </div>
 
@@ -204,11 +204,11 @@
                                     {{-- Agence --}}
                                     <td class="py-4 px-6">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-amber-400 font-extrabold text-xs flex items-center justify-center shrink-0 shadow-inner">
+                                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-700 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-inner">
                                                 {{ $monogram }}
                                             </div>
                                             <div>
-                                                <div class="font-extrabold text-slate-900">{{ $agence->nom_agence }}</div>
+                                                <a href="{{ route('superadmin.agences.show', $agence) }}" class="font-extrabold text-slate-900 hover:text-emerald-700 hover:underline">{{ $agence->nom_agence }}</a>
                                                 <div class="text-[11px] text-slate-400">Partenaire depuis le {{ \Carbon\Carbon::parse($agence->date_partenariat)->format('d/m/Y') }}</div>
                                             </div>
                                         </div>

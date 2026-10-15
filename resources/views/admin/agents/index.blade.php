@@ -3,6 +3,8 @@
 @section('content')
 <div class="space-y-7" x-data="{ searchQuery: '', filterStatut: 'all' }">
 
+    @include('partials.mot-de-passe-temporaire')
+
     {{-- EN-TÊTE AVEC TITRE ET ACTIONS --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -167,6 +169,16 @@
                                     <i class="fa-solid fa-pen-to-square"></i>
                                     <span>Modifier</span>
                                 </a>
+
+                                <form action="{{ route('admin.agents.mot_de_passe', $agent) }}" method="POST"
+                                      onsubmit="return confirm('Générer un nouveau mot de passe pour cet agent ? Il sera déconnecté de l\'application.')">
+                                    @csrf
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-2 text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-xl transition-colors border border-amber-100">
+                                        <i class="fa-solid fa-key"></i>
+                                        <span>Nouveau mot de passe</span>
+                                    </button>
+                                </form>
 
                                 <form action="{{ route('admin.agents.destroy', $agent) }}"
                                       method="POST"

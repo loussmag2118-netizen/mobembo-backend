@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\VoyageurController;
 use App\Http\Controllers\SuperAdmin\AgenceController as SuperAdminAgenceController;
 use App\Http\Controllers\SuperAdmin\AuthController as SuperAdminAuthController;
 use App\Http\Controllers\SuperAdmin\VilleController as SuperAdminVilleController;
+use App\Http\Controllers\SuperAdmin\TableauDeBordController as SuperAdminTableauDeBordController;
 
 // ================================================================
 // CONTRÔLEURS CANADIAN AIRWAYS
@@ -91,7 +92,7 @@ Route::get('/admin', fn () => redirect()->route('admin.dashboard'))
     ->middleware('auth');
 Route::get('/canadian', fn () => redirect()->route('canadian.admin'))
     ->middleware('auth:canadian');
-Route::get('/superadmin', fn () => redirect()->route('superadmin.agences.index'))
+Route::get('/superadmin', fn () => redirect()->route('superadmin.dashboard'))
     ->middleware('auth:superadmin');
 
 // ================================================================
@@ -105,8 +106,23 @@ Route::middleware('auth:superadmin')
         Route::post('/logout', [SuperAdminAuthController::class, 'logout'])
             ->name('logout');
 
+        Route::get('/tableau-de-bord', [SuperAdminTableauDeBordController::class, 'index'])
+            ->name('dashboard');
+        Route::get('/journal', [SuperAdminTableauDeBordController::class, 'journal'])
+            ->name('journal');
+
         Route::get('/agences', [SuperAdminAgenceController::class, 'index'])
             ->name('agences.index');
+        Route::get('/agences/{agence}', [SuperAdminAgenceController::class, 'show'])
+            ->name('agences.show');
+        Route::put('/agences/{agence}', [SuperAdminAgenceController::class, 'update'])
+            ->name('agences.update');
+        Route::post('/agences/{agence}/admins', [SuperAdminAgenceController::class, 'ajouterAdmin'])
+            ->name('agences.admins.store');
+        Route::post('/agences/{agence}/admins/{admin}/mot-de-passe', [SuperAdminAgenceController::class, 'reinitialiserAdmin'])
+            ->name('agences.admins.reinitialiser');
+        Route::patch('/agences/{agence}/admins/{admin}/statut', [SuperAdminAgenceController::class, 'basculerAdmin'])
+            ->name('agences.admins.statut');
 
         Route::post('/agences', [SuperAdminAgenceController::class, 'store'])
             ->name('agences.store');
@@ -164,6 +180,7 @@ Route::middleware(['auth', 'agence.active'])
             Route::post('/agents/{id}/restore', [AgentController::class, 'restore'])->name('agents.restore');
             Route::delete('/agents/{id}/force-delete', [AgentController::class, 'forceDelete'])->name('agents.forceDelete');
             Route::get('/agents/{agent}/historique', [AgentHistoryController::class, 'show'])->name('agents.historique');
+            Route::post('/agents/{agent}/mot-de-passe', [AgentController::class, 'reinitialiserMotDePasse'])->name('agents.mot_de_passe');
             Route::resource('agents', AgentController::class);
 
             Route::resource('planifications', PlanificationVoyageController::class)

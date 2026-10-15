@@ -78,14 +78,17 @@ class AgentController extends Controller
             } while (Utilisateur::where('code_acces_agent', $codeAcces)->exists());
         }
 
-        Utilisateur::create([
+        // Mot de passe temporaire unique, affiché une seule fois à l'admin
+        $motDePasse = \App\Http\Controllers\SuperAdmin\AgenceController::motDePasseTemporaire();
+
+        $agentCree = Utilisateur::create([
             'agence_id'         => Auth::user()->agence_id,
             'gare_id'           => $gare->id, // ✅ Enregistre bien la gare
             'nom'               => $request->nom,
             'prenom'            => $request->prenom,
             'telephone'         => $request->telephone,
             'role'              => 'Agent',
-            'mot_de_passe'      => Hash::make('Mobembo2026'),
+            'mot_de_passe'      => Hash::make($motDePasse),
             'code_acces_agent'  => $codeAcces,
             'statut'            => 'actif',
             'compte_confirme'   => true,
@@ -93,7 +96,11 @@ class AgentController extends Controller
 
         return redirect()
             ->route('admin.agents.index')
-            ->with('success', 'Agent créé, rattaché à sa gare et à votre agence avec succès.');
+            ->with('success', 'Agent créé, rattaché à sa gare et à votre agence avec succès.')
+            ->with('mot_de_passe_temporaire', [
+                'compte'       => "{$agentCree->prenom} {$agentCree->nom} ({$agentCree->telephone})",
+                'mot_de_passe' => $motDePasse,
+            ]);
     }
 
     /**
@@ -275,5 +282,27 @@ class AgentController extends Controller
             403,
             'Accès non autorisé à cet agent.'
         );
+    }
+
+    /**
+     * Générer un nouveau mot de passe temporaire pour un agent de l'agence.
+     */
+    public function reinitialiserMotDePasse(Utilisateur $agent)
+    {
+        $this->authorizeAgence($agent);
+        abort_unless($agent->role === 'Agent', 404);
+
+        $motDePasse = \App\Http\Controllers\SuperAdmin\AgenceController::motDePasseTemporaire();
+        $agent->update(['mot_de_passe' => Hash::make($motDePasse)]);
+        // Déconnecte l'app mobile de l'agent (jetons existants)
+        $agent->tokens()->delete();
+        \App\Support\Audit::log('admin.agent.mot_de_passe_reinitialise', $agent, ['telephone' => $agent->telephone]);
+
+        return redirect()
+            ->route('admin.agents.index')
+            ->with('mot_de_passe_temporaire', [
+                'compte'       => "{$agent->prenom} {$agent->nom} ({$agent->telephone})",
+                'mot_de_passe' => $motDePasse,
+            ]);
     }
 }

@@ -228,7 +228,12 @@ class AgentPresenceController extends Controller
     {
         $agent = Auth::user();
 
-        return ($agent && $agent->agence_id && in_array($agent->role, ['Agent', 'Admin'], true)) ? $agent : null;
+        $autorise = $agent && $agent->agence_id
+            && in_array($agent->role, ['Agent', 'Admin'], true)
+            && strtolower((string) $agent->statut) === 'actif'          // compte non suspendu
+            && $agent->agence?->statut === 'Actif';                       // agence non bloquée
+
+        return $autorise ? $agent : null;
     }
 
     /**

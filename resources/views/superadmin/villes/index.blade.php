@@ -1,4 +1,4 @@
-@extends('superadmin.layout')
+@extends('layouts.admin')
 
 @section('title', 'Villes desservies')
 @section('header_icon', 'fa-city')
@@ -27,7 +27,7 @@
         <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
             <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Villes enregistrées</span>
-                <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
                     <i class="fa-solid fa-city"></i>
                 </div>
             </div>
@@ -61,7 +61,7 @@
     {{-- 2. AJOUT D'UNE VILLE --}}
     <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-7">
         <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-            <i class="fa-solid fa-plus-circle text-amber-500"></i>
+            <i class="fa-solid fa-plus-circle text-emerald-600"></i>
             <span>Nouvelle ville</span>
         </h2>
         <p class="text-xs text-slate-500 mt-0.5 mb-5">
@@ -71,9 +71,9 @@
         <form action="{{ route('superadmin.villes.store') }}" method="POST" class="flex flex-col sm:flex-row gap-3">
             @csrf
             <input type="text" name="nom" value="{{ old('nom') }}" required maxlength="100" placeholder="Ex: Sibiti"
-                   class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                   class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
             <button type="submit"
-                    class="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold py-2.5 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+                    class="bg-[#124231] hover:bg-[#0c2f23] text-white font-bold py-2.5 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
                 <i class="fa-solid fa-plus"></i>
                 <span>Ajouter la ville</span>
             </button>
@@ -94,7 +94,7 @@
             <div class="relative w-full sm:w-72">
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
                 <input type="text" x-model="searchQuery" placeholder="Rechercher une ville..."
-                       class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                       class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
             </div>
         </div>
 
@@ -117,7 +117,7 @@
                             {{-- Nom (avec renommage en ligne) --}}
                             <td class="py-4 px-6">
                                 <div x-show="editId !== {{ $ville->id }}" class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-amber-400 flex items-center justify-center shrink-0">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-700 text-white flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-city text-xs"></i>
                                     </div>
                                     <span class="font-extrabold text-slate-900">{{ $ville->nom }}</span>
@@ -128,8 +128,8 @@
                                     @csrf
                                     @method('PUT')
                                     <input type="text" name="nom" value="{{ $ville->nom }}" required maxlength="100"
-                                           class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-900 text-amber-400 text-xs font-bold">OK</button>
+                                           class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+                                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-[#124231] text-white text-xs font-bold">OK</button>
                                     <button type="button" @click="editId = null" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold">Annuler</button>
                                 </form>
                             </td>

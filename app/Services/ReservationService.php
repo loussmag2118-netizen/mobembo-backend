@@ -159,6 +159,10 @@ class ReservationService
             if (! $voyage) {
                 throw new ReservationImpossibleException('Voyage introuvable.', 404);
             }
+            $voyage->loadMissing('agence');
+            if ($voyage->agence && $voyage->agence->statut !== 'Actif') {
+                throw new ReservationImpossibleException("Cette agence ne vend pas de billets pour le moment.", 403);
+            }
             if ($voyage->statut_voyage !== 'Programmation') {
                 throw new ReservationImpossibleException("Ce départ n'est plus ouvert à la réservation.");
             }

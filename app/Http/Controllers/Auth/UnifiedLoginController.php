@@ -62,7 +62,7 @@ class UnifiedLoginController extends Controller
             $request->session()->regenerate();
             Audit::log('connexion.reussie', $superAdmin, ['espace' => 'superadmin']);
 
-            return redirect()->intended(route('superadmin.agences.index'));
+            return redirect()->intended(route('superadmin.dashboard'));
         }
 
         // ============================================================

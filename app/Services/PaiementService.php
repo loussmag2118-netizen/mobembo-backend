@@ -322,7 +322,11 @@ class PaiementService
                 $this->reservations->recalculerPlaces($voyage);
                 $expires = $tickets->where('statut_paiement', 'Echoue');
 
-                if ($expires->isNotEmpty() && $voyage->fresh()->places_disponibles < $expires->count()) {
+                // Siège revendu entre-temps : le billet expiré ne peut pas être réactivé
+                $siegesPris = array_flip($this->reservations->siegesOccupes($voyage));
+                $siegeRevendu = $expires->contains(fn ($t) => $t->numero_siege !== null && isset($siegesPris[$t->numero_siege]));
+
+                if ($expires->isNotEmpty() && ($siegeRevendu || $voyage->fresh()->places_disponibles < $expires->count())) {
                     // Le client a payé mais sa place a été revendue entre-temps
                     Log::critical("Paiement {$reference} confirmé après expiration, plus de place : remboursement nécessaire.");
                     Audit::log('paiement.a_rembourser', $tickets->first(), [

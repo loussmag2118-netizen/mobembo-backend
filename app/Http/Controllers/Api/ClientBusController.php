@@ -95,6 +95,7 @@ class ClientBusController extends Controller
                 'prix'               => (float) $v->prix,
                 'prix_enfant'        => $v->prix_enfant !== null ? (float) $v->prix_enfant : null,   // null = prix adulte
                 'age_max_enfant'     => (int) ($v->agence?->age_max_enfant ?? 12),
+                'choix_siege'        => (bool) $v->agence?->choix_siege,
                 'places_disponibles' => (int) $v->places_disponibles,
                 // Facultatifs : null si l'agence ne les a pas renseignés
                 'duree_minutes'      => $v->trajet?->duree_minutes,
@@ -108,6 +109,27 @@ class ClientBusController extends Controller
             'voyages'  => $departs,
             'message'  => $departs->isEmpty() ? 'Aucun départ disponible pour ces critères.' : null,
         ]);
+    }
+
+    /**
+     * GET /api/departs/{id}/sieges — plan du bus et sièges déjà pris.
+     * Aucune donnée personnelle : seulement les numéros occupés.
+     */
+    public function sieges(int $id): JsonResponse
+    {
+        $this->reservations->expirerReservations();
+
+        $voyage = PlanificationVoyage::with(['agence', 'bus'])
+            ->whereKey($id)
+            ->where('statut_voyage', 'Programmation')
+            ->whereHas('agence', fn ($q) => $q->where('statut', 'Actif'))
+            ->first();
+
+        if (! $voyage) {
+            return response()->json(['message' => "Ce départ n'est plus disponible."], 404);
+        }
+
+        return response()->json(['success' => true, 'planification_id' => $voyage->id] + $this->reservations->planSieges($voyage));
     }
 
     // GET /api/mes-billets — billets du client connecté
@@ -134,6 +156,7 @@ class ClientBusController extends Controller
                     'prenom'              => $t->prenom_passager,
                     'categorie'           => $t->categorie_passager ?? 'Adulte',
                     'age'                 => $t->age_passager,
+                    'siege'               => $t->numero_siege,
                     'ville_depart'        => $t->ville_depart ?? $voyage?->trajet?->ville_depart,
                     'ville_arrivee'       => $t->ville_arrivee ?? $voyage?->trajet?->ville_arrivee,
                     'gare_depart'         => $voyage?->trajet?->gareDepart?->nom_gare,

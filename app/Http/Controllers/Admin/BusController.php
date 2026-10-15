@@ -59,6 +59,7 @@ class BusController extends Controller
             ],
             'modele'          => 'required|string|max:100',
             'capacite_totale' => 'required|integer|min:1|max:200',
+            'disposition_sieges' => 'nullable|in:1-1,2-1,2-2,3-2',
             'statut'          => 'required|in:Disponible,Maintenance,Indisponible',
         ], [
             'immatriculation.unique' => 'Cette immatriculation existe déjà pour votre agence.',
@@ -71,6 +72,7 @@ class BusController extends Controller
             'immatriculation' => $request->immatriculation,
             'modele'          => $request->modele,
             'capacite_totale' => $request->capacite_totale,
+            'disposition_sieges' => $request->input('disposition_sieges', '2-2'),
             'statut'          => $request->statut ?? 'Disponible',
         ]);
 
@@ -111,6 +113,7 @@ class BusController extends Controller
             ],
             'modele'          => 'required|string|max:100',
             'capacite_totale' => 'required|integer|min:1|max:200',
+            'disposition_sieges' => 'nullable|in:1-1,2-1,2-2,3-2',
             'statut'          => 'required|in:Disponible,Maintenance,Indisponible',
         ], [
             'immatriculation.unique' => 'Cette immatriculation existe déjà pour votre agence.',
@@ -120,6 +123,7 @@ class BusController extends Controller
             'immatriculation' => $request->immatriculation,
             'modele'          => $request->modele,
             'capacite_totale' => $request->capacite_totale,
+            'disposition_sieges' => $request->input('disposition_sieges', '2-2'),
             'statut'          => $request->statut,
         ]);
 

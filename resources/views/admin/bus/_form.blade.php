@@ -67,6 +67,31 @@
         @enderror
     </div>
 
+    {{-- DISPOSITION DES SIÈGES (plan du bus pour le choix du siège) --}}
+    <div class="space-y-2">
+        <label class="block text-sm font-extrabold text-slate-900">
+            Disposition des sièges
+        </label>
+        <div class="relative">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                <i class="fa-solid fa-table-cells text-base"></i>
+            </div>
+            @php $disposition = old('disposition_sieges', $bus->disposition_sieges ?? '2-2'); @endphp
+            <select name="disposition_sieges"
+                    class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+                @foreach (['2-2' => '2 + 2 (4 sièges par rangée)', '2-1' => '2 + 1 (VIP, 3 par rangée)', '3-2' => '3 + 2 (5 par rangée)', '1-1' => '1 + 1 (minibus)'] as $valeur => $libelle)
+                    <option value="{{ $valeur }}" @selected($disposition === $valeur)>{{ $libelle }}</option>
+                @endforeach
+            </select>
+        </div>
+        <p class="text-xs text-slate-400 font-semibold">
+            Sièges à gauche + à droite du couloir. Sert à dessiner le plan du bus quand le client choisit son siège.
+        </p>
+        @error('disposition_sieges')
+            <p class="mt-1 text-xs font-bold text-rose-600">{{ $message }}</p>
+        @enderror
+    </div>
+
     {{-- STATUT --}}
     <div class="space-y-2">
         <label class="block text-sm font-extrabold text-slate-900">

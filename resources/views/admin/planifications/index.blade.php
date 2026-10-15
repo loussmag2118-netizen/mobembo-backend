@@ -50,6 +50,26 @@
         @error('age_max_enfant')
             <p class="text-xs font-bold text-rose-600 -mt-4">{{ $message }}</p>
         @enderror
+        <form action="{{ route('admin.agence.choix_siege') }}" method="POST"
+              class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-2xl border border-slate-200/80 px-5 py-4">
+            @csrf
+            @method('PATCH')
+            @php $choixSiege = (bool) auth()->user()->agence?->choix_siege; @endphp
+            <div class="flex items-center gap-3 flex-1">
+                <span class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-couch"></i></span>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">Choix du siège par le client</p>
+                    <p class="text-xs text-slate-500 font-semibold">
+                        {{ $choixSiege ? 'Activé : le client choisit son siège sur le plan du bus.' : 'Désactivé : un siège libre est attribué automatiquement.' }}
+                    </p>
+                </div>
+            </div>
+            <input type="hidden" name="choix_siege" value="{{ $choixSiege ? 0 : 1 }}">
+            <button type="submit"
+                    class="px-4 py-2.5 rounded-xl text-sm font-bold {{ $choixSiege ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700' }}">
+                {{ $choixSiege ? 'Désactiver' : 'Activer' }}
+            </button>
+        </form>
     @endif
 
     {{-- CONTENEUR TABLEAU AVEC RECHERCHE ET FILTRES --}}

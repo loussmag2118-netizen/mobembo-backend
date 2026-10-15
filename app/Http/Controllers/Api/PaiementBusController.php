@@ -61,6 +61,7 @@ class PaiementBusController extends Controller
             'passagers.*.telephone'   => 'nullable|string|max:30',
             'passagers.*.categorie'   => 'nullable|in:Adulte,Enfant',
             'passagers.*.age'         => 'nullable|integer|min:0|max:17',
+            'passagers.*.siege'       => 'nullable|integer|min:1|max:200',
         ], ['phone.regex' => $messageTelephone]);
 
         if ($validator->fails()) {

@@ -232,6 +232,64 @@
         </div>
     </div>
 
+    {{-- PLAN DES SIÈGES (synchronisé avec les réservations de l'application) --}}
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8"
+         x-data="planSieges('{{ route('admin.planifications.sieges', $planificationVoyage) }}')" x-init="charger(); setInterval(() => charger(), 15000)">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+                <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-couch text-emerald-600"></i> Plan des sièges
+                </h2>
+                <p class="text-xs text-slate-500 font-semibold mt-1">
+                    <span x-show="plan.choix_siege">Les clients choisissent leur siège dans l'application.</span>
+                    <span x-show="!plan.choix_siege">Choix du siège désactivé : attribution automatique.</span>
+                    Mise à jour automatique — <span x-text="'à ' + (majA || '…')"></span>
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600">
+                <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-md border-2 border-slate-300 bg-white"></span>Libre</span>
+                <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-md bg-emerald-500"></span>Payé</span>
+                <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-md bg-amber-400"></span>En attente</span>
+                <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-md bg-sky-600"></span>Embarqué</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            {{-- Le bus vu de dessus --}}
+            <div class="mx-auto lg:mx-0 rounded-[2rem] border-2 border-slate-200 bg-slate-50 px-5 pt-4 pb-6">
+                <div class="flex justify-between items-center mb-4 px-1 text-slate-400 text-xs font-bold">
+                    <span><i class="fa-solid fa-user"></i> Chauffeur</span>
+                    <span>Avant</span>
+                </div>
+                <template x-for="(rangee, r) in rangees" :key="r">
+                    <div class="flex gap-1.5 mb-1.5">
+                        <template x-for="(n, i) in rangee" :key="i">
+                            <div :class="n === null ? 'w-6' : ''">
+                                <button type="button" x-show="n !== null"
+                                        class="w-10 h-10 rounded-lg text-xs font-black transition-transform hover:scale-105"
+                                        :class="classe(n)" :title="infobulle(n)" x-text="n"></button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            {{-- Résumé --}}
+            <div class="flex-1 space-y-3">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="rounded-2xl bg-slate-50 p-4"><p class="text-xs font-bold text-slate-500">Sièges</p><p class="text-2xl font-black text-slate-900" x-text="plan.nombre_sieges ?? '–'"></p></div>
+                    <div class="rounded-2xl bg-emerald-50 p-4"><p class="text-xs font-bold text-emerald-700">Occupés</p><p class="text-2xl font-black text-emerald-700" x-text="details.length"></p></div>
+                    <div class="rounded-2xl bg-sky-50 p-4"><p class="text-xs font-bold text-sky-700">Libres</p><p class="text-2xl font-black text-sky-700" x-text="placesLibres"></p></div>
+                </div>
+                <p class="text-xs text-slate-500 font-semibold" x-show="sansSiege > 0">
+                    <i class="fa-solid fa-circle-info"></i> <span x-text="sansSiege"></span> billet(s) vendu(s) sans numéro de siège (avant l'activation du choix du siège).
+                </p>
+                <p class="text-xs text-rose-600 font-bold" x-show="erreur" x-text="erreur"></p>
+                <p class="text-xs text-slate-400 font-semibold">Passez la souris sur un siège pour voir le passager.</p>
+            </div>
+        </div>
+    </div>
+
     {{-- LISTE DES TICKETS PASSAGERS ASSOCIÉS --}}
     <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div class="p-6 sm:px-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -352,3 +410,51 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function planSieges(url) {
+        return {
+            plan: {}, details: [], rangees: [], placesLibres: '–', sansSiege: 0, majA: null, erreur: null,
+            async charger() {
+                try {
+                    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!r.ok) throw new Error();
+                    const d = await r.json();
+                    this.plan = d.plan; this.details = d.details; this.placesLibres = d.places_libres;
+                    this.sansSiege = d.sans_siege; this.majA = d.mis_a_jour; this.erreur = null;
+                    this.construire();
+                } catch (e) {
+                    this.erreur = 'Mise à jour impossible pour le moment.';
+                }
+            },
+            // Rangées : sièges de gauche, couloir (null), sièges de droite
+            construire() {
+                const g = this.plan.disposition?.gauche ?? 2, dr = this.plan.disposition?.droite ?? 2;
+                const total = this.plan.nombre_sieges ?? 0, rangees = [];
+                for (let n = 1; n <= total; n += g + dr) {
+                    const rangee = [];
+                    for (let k = 0; k < g; k++) if (n + k <= total) rangee.push(n + k);
+                    rangee.push(null);
+                    for (let k = 0; k < dr; k++) if (n + g + k <= total) rangee.push(n + g + k);
+                    rangees.push(rangee);
+                }
+                this.rangees = rangees;
+            },
+            occupant(n) { return this.details.find(t => t.siege === n); },
+            classe(n) {
+                const t = this.occupant(n);
+                if (!t) return 'bg-white border-2 border-slate-300 text-slate-500';
+                if (t.present) return 'bg-sky-600 text-white';
+                return t.statut === 'Paye' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-white';
+            },
+            infobulle(n) {
+                const t = this.occupant(n);
+                if (!t) return 'Siège ' + n + ' — libre';
+                return 'Siège ' + n + ' — ' + t.nom + (t.categorie === 'Enfant' ? ' (enfant)' : '')
+                    + ' — ' + (t.statut === 'Paye' ? 'payé' : 'en attente de paiement') + ' — ' + t.reference;
+            },
+        };
+    }
+</script>
+@endpush

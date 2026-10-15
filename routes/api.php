@@ -109,6 +109,7 @@ Route::get('/agence-donnees', [TrajetController::class, 'apiAgenceDonnees']);
 // Recherche de voyages toutes agences confondues
 Route::get('/villes-terrestres', [ClientBusController::class, 'villes']);
 Route::get('/voyages/recherche', [ClientBusController::class, 'rechercher'])->middleware('throttle:60,1');
+Route::get('/departs/{id}/sieges', [ClientBusController::class, 'sieges'])->whereNumber('id')->middleware('throttle:120,1');
 
 // ============================================================
 // ⭐ ROUTES PUBLIQUES — Recherche de vols Canadian Airways

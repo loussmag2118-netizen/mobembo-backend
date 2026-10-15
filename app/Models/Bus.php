@@ -17,6 +17,7 @@ class Bus extends Model
         'immatriculation',
         'modele',
         'capacite_totale',
+        'disposition_sieges', // ex. « 2-2 » : sièges à gauche et à droite du couloir
         'statut', // ⭐ NOUVEAU
     ];
 
@@ -124,5 +125,15 @@ class Bus extends Model
         [$class, $label] = $badges[$this->statut] ?? ['bg-slate-100 text-slate-700', '• Inconnu'];
 
         return '<span class="px-2.5 py-1 rounded-full text-xs font-semibold '.$class.'">'.$label.'</span>';
+    }
+
+    /** Sièges par rangée à gauche et à droite du couloir, ex. [2, 2]. */
+    public function getDispositionAttribute(): array
+    {
+        if (preg_match('/^([1-3])-([1-3])$/', (string) $this->disposition_sieges, $m)) {
+            return [(int) $m[1], (int) $m[2]];
+        }
+
+        return [2, 2];
     }
 }

@@ -174,6 +174,7 @@ Route::middleware(['auth', 'agence.active'])
             Route::resource('voyageurs', VoyageurController::class)->except(['index', 'show']);
             Route::resource('statistiques', StatistiqueController::class);
             Route::patch('/agence/age-enfant', [PlanificationVoyageController::class, 'majAgeEnfant'])->name('agence.age_enfant');
+            Route::patch('/agence/choix-siege', [PlanificationVoyageController::class, 'majChoixSiege'])->name('agence.choix_siege');
         });
 
         // --- Lecture : accessible aux agents (guichet / contrôle) et aux admins
@@ -183,6 +184,8 @@ Route::middleware(['auth', 'agence.active'])
                 ->parameters(['planifications' => 'planificationVoyage']);
             Route::resource('voyageurs', VoyageurController::class)->only(['index', 'show']);
             Route::resource('tickets', TicketAdminController::class)->only(['index']);
+            Route::get('/planifications/{planificationVoyage}/sieges', [PlanificationVoyageController::class, 'sieges'])
+                ->name('planifications.sieges');
         });
     });
 

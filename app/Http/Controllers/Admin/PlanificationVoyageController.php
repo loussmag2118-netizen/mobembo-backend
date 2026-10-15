@@ -84,6 +84,7 @@ class PlanificationVoyageController extends Controller
                 'agence_id'            => $p->agence_id,
                 'prix_enfant'          => $p->prix_enfant !== null ? (float) $p->prix_enfant : null, // null = prix adulte
                 'age_max_enfant'       => (int) ($p->agence?->age_max_enfant ?? 12),
+                'choix_siege'          => (bool) $p->agence?->choix_siege,
                 'trajet' => $p->trajet ? [
                     'id'            => $p->trajet->id,
                     'ville_depart'  => $p->trajet->ville_depart,
@@ -415,5 +416,52 @@ class PlanificationVoyageController extends Controller
         \App\Support\Audit::log('agence.age_max_enfant', $agence, ['age_max_enfant' => (int) $request->age_max_enfant]);
 
         return back()->with('success', "Tarif enfant : jusqu'à {$agence->age_max_enfant} ans.");
+    }
+
+    /**
+     * Plan des sièges d'un départ pour l'administration (JSON, rafraîchi
+     * automatiquement par la page du départ) : qui occupe quel siège.
+     */
+    public function sieges(PlanificationVoyage $planificationVoyage, ReservationService $reservations)
+    {
+        $this->authorizeAgence($planificationVoyage);
+        $reservations->expirerReservations();
+
+        $details = $planificationVoyage->tickets()
+            ->whereIn('statut_paiement', ['Paye', 'En_Attente'])
+            ->get()
+            ->map(fn ($t) => [
+                'siege'     => $t->numero_siege,
+                'nom'       => trim($t->nom_passager . ' ' . $t->prenom_passager),
+                'categorie' => $t->categorie_passager ?? 'Adulte',
+                'statut'    => $t->statut_paiement,
+                'present'   => $t->statut_embarquement === 'Present',
+                'reference' => $t->reference_ticket,
+            ])->values();
+
+        return response()->json([
+            'plan'          => $reservations->planSieges($planificationVoyage->fresh()),
+            'details'       => $details,
+            'sans_siege'    => $details->whereNull('siege')->count(),
+            'places_libres' => (int) $planificationVoyage->fresh()->places_disponibles,
+            'mis_a_jour'    => now()->format('H:i:s'),
+        ]);
+    }
+
+    /**
+     * Active ou désactive le choix du siège par les clients de l'agence.
+     */
+    public function majChoixSiege(Request $request)
+    {
+        $agence = Auth::user()->agence;
+        abort_unless($agence, 403);
+
+        $actif = $request->boolean('choix_siege');
+        $agence->update(['choix_siege' => $actif]);
+        \App\Support\Audit::log('agence.choix_siege', $agence, ['choix_siege' => $actif]);
+
+        return back()->with('success', $actif
+            ? 'Les clients choisissent désormais leur siège.'
+            : 'Le choix du siège est désactivé : les sièges seront attribués automatiquement.');
     }
 }

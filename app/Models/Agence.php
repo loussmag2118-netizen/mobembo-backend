@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Agence extends Model
 {
     protected $table = 'agences';
-    protected $fillable = ['nom_agence', 'statut', 'age_max_enfant', 'date_partenariat', 'superadmin_id'];
+    protected $fillable = ['nom_agence', 'statut', 'age_max_enfant', 'choix_siege', 'date_partenariat', 'superadmin_id'];
 
-    protected $casts = ['age_max_enfant' => 'integer'];
+    protected $casts = ['age_max_enfant' => 'integer', 'choix_siege' => 'boolean'];
 
     public function superAdmin()
     {

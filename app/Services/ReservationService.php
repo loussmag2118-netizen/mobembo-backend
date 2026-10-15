@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\ReservationImpossibleException;
 use App\Models\PlanificationVoyage;
 use App\Models\Ticket;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -78,6 +79,7 @@ class ReservationService
                 'telephone' => $p['telephone'] ?? null,
                 'categorie' => $categorie,
                 'age'       => $categorie === 'Enfant' ? $age : null,
+                'siege'     => isset($p['siege']) && $p['siege'] !== '' ? (int) $p['siege'] : null,
             ];
         }, array_values($passagers));
     }
@@ -127,6 +129,26 @@ class ReservationService
             throw new ReservationImpossibleException('Au moins un passager est requis.');
         }
 
+        try {
+            return $this->reserverDansTransaction(
+                $planificationId, $passagers, $nombre, $modePaiement,
+                $referencePaiement, $telephonePaiement, $payeImmediatement, $utilisateurId
+            );
+        } catch (UniqueConstraintViolationException $e) {
+            // Dernier filet : la base refuse deux billets actifs sur un même siège
+            if (str_contains($e->getMessage(), 'tickets_siege_unique_par_depart')) {
+                throw new ReservationImpossibleException(
+                    "Un des sièges choisis vient d'être réservé par un autre voyageur. Choisissez-en un autre.", 409
+                );
+            }
+            throw $e;
+        }
+    }
+
+    private function reserverDansTransaction(
+        int $planificationId, array $passagers, int $nombre, string $modePaiement,
+        string $referencePaiement, ?string $telephonePaiement, bool $payeImmediatement, ?int $utilisateurId,
+    ): Collection {
         return DB::transaction(function () use (
             $planificationId, $passagers, $nombre, $modePaiement,
             $referencePaiement, $telephonePaiement, $payeImmediatement, $utilisateurId
@@ -159,7 +181,7 @@ class ReservationService
             }
 
             $voyage->loadMissing(['trajet.gareDepart', 'trajet.gareArrivee', 'vagueDepart', 'bus', 'agence']);
-            $passagers = $this->normaliserPassagers($voyage, $passagers);
+            $passagers = $this->attribuerSieges($voyage, $this->normaliserPassagers($voyage, $passagers));
             $gareDepart  = $voyage->trajet?->gareDepart;
             $gareArrivee = $voyage->trajet?->gareArrivee;
             $vague       = $voyage->vagueDepart;
@@ -181,6 +203,7 @@ class ReservationService
                     'telephone_passager' => $passager['telephone'] ?? null,
                     'categorie_passager' => $passager['categorie'],
                     'age_passager'       => $passager['age'],
+                    'numero_siege'       => $passager['siege'],
 
                     'ville_depart'    => $gareDepart?->ville ?? $voyage->trajet?->ville_depart,
                     'gare_depart_id'  => $gareDepart?->id,
@@ -211,6 +234,107 @@ class ReservationService
 
             return $tickets;
         });
+    }
+
+    // ==================================================================
+    // SIÈGES (agences avec choix du siège)
+    // ==================================================================
+
+    public function choixSiegeActif(PlanificationVoyage $voyage): bool
+    {
+        $voyage->loadMissing('agence');
+
+        return (bool) ($voyage->agence?->choix_siege);
+    }
+
+    /**
+     * Sièges occupés par un billet payé ou une réservation non expirée.
+     *
+     * @return array<int, int>
+     */
+    public function siegesOccupes(PlanificationVoyage $voyage): array
+    {
+        return Ticket::where('planification_voyage_id', $voyage->id)
+            ->whereNotNull('numero_siege')
+            ->where(function ($q) {
+                $q->where('statut_paiement', 'Paye')
+                  ->orWhere(function ($q) {
+                      $q->where('statut_paiement', 'En_Attente')
+                        ->where(function ($q) {
+                            $q->whereNull('expire_le')->orWhere('expire_le', '>=', now());
+                        });
+                  });
+            })
+            ->pluck('numero_siege')
+            ->map(fn ($n) => (int) $n)
+            ->sort()->values()->all();
+    }
+
+    /**
+     * Plan du bus pour un départ : disposition, nombre de sièges et sièges
+     * occupés (sans aucune donnée personnelle).
+     */
+    public function planSieges(PlanificationVoyage $voyage): array
+    {
+        $voyage->loadMissing('bus');
+        [$gauche, $droite] = $voyage->bus?->disposition ?? [2, 2];
+
+        return [
+            'choix_siege'  => $this->choixSiegeActif($voyage),
+            'nombre_sieges'=> $this->placesTotales($voyage),
+            'disposition'  => ['gauche' => $gauche, 'droite' => $droite],
+            'occupes'      => $this->siegesOccupes($voyage),
+        ];
+    }
+
+    /**
+     * Vérifie les sièges demandés et attribue un siège libre aux passagers
+     * qui n'en ont pas choisi. Sans effet si l'agence n'a pas le choix du siège.
+     */
+    private function attribuerSieges(PlanificationVoyage $voyage, array $passagers): array
+    {
+        if (! $this->choixSiegeActif($voyage)) {
+            return array_map(fn ($p) => [...$p, 'siege' => null], $passagers);
+        }
+
+        $total    = $this->placesTotales($voyage);
+        $occupes  = array_flip($this->siegesOccupes($voyage));
+        $demandes = [];
+
+        foreach ($passagers as $p) {
+            $n = $p['siege'];
+            if ($n === null) {
+                continue;
+            }
+            if ($n < 1 || $n > $total) {
+                throw new ReservationImpossibleException("Le siège {$n} n'existe pas dans ce bus.");
+            }
+            if (isset($demandes[$n])) {
+                throw new ReservationImpossibleException("Le siège {$n} est choisi pour deux passagers.");
+            }
+            if (isset($occupes[$n])) {
+                throw new ReservationImpossibleException(
+                    "Le siège {$n} vient d'être réservé par un autre voyageur. Choisissez-en un autre.", 409
+                );
+            }
+            $demandes[$n] = true;
+        }
+
+        // Sièges libres attribués dans l'ordre aux passagers sans choix
+        $libre = 1;
+        foreach ($passagers as &$p) {
+            if ($p['siege'] !== null) {
+                continue;
+            }
+            while (isset($occupes[$libre]) || isset($demandes[$libre])) {
+                $libre++;
+            }
+            $p['siege'] = $libre;
+            $demandes[$libre] = true;
+        }
+        unset($p);
+
+        return $passagers;
     }
 
     /**
@@ -246,6 +370,7 @@ class ReservationService
                 'billet_test'      => PaiementService::estReferenceTest($t->reference_paiement),
                 'categorie'        => $t->categorie_passager ?? 'Adulte',
                 'age'              => $t->age_passager,
+                'siege'            => $t->numero_siege,
             ];
         })->values()->all();
     }

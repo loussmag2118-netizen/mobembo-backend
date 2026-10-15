@@ -26,6 +26,7 @@ class Ticket extends Model
         'telephone_passager',     // ⬅️ NOUVEAU
         'categorie_passager',     // Adulte / Enfant
         'age_passager',           // âge déclaré pour un enfant
+        'numero_siege',           // siège choisi (agences avec choix du siège)
 
         // === Trajet figé au moment de la vente ===
         'ville_depart',

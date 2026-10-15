@@ -59,6 +59,12 @@ use App\Http\Controllers\Auth\UnifiedLoginController;
 Route::get('/medias/{id}', [\App\Http\Controllers\MediaController::class, 'afficher'])->whereNumber('id')->name('medias.afficher');
 
 // Page publique d'un billet, ouverte en scannant son QR code
+// Pages publiques exigées par Google Play
+Route::get('/confidentialite', [\App\Http\Controllers\PagesPubliquesController::class, 'confidentialite'])->name('confidentialite');
+Route::get('/suppression-compte', [\App\Http\Controllers\PagesPubliquesController::class, 'suppressionCompte'])->name('compte.suppression');
+Route::post('/suppression-compte', [\App\Http\Controllers\PagesPubliquesController::class, 'supprimerCompte'])
+    ->middleware('throttle:connexion')->name('compte.supprimer');
+
 Route::get('/billet/{jeton}', [\App\Http\Controllers\BilletPublicController::class, 'afficher'])
     ->where('jeton', '[A-Za-z0-9]{64}')->middleware('throttle:60,1')->name('billet.public');
 

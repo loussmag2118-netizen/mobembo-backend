@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Utilisateur;
 use App\Support\JetonReinitialisation;
+use App\Support\SuppressionCompte;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -50,8 +51,8 @@ class AuthController extends Controller
         // Numéro déjà pris par un compte confirmé (ou du personnel) : refusé.
         // Compte client jamais confirmé (code non saisi) : la nouvelle
         // inscription le remplace, le numéro n'est pas bloqué.
-        $existant = Utilisateur::where('telephone', $request->telephone)->first();
-        if ($existant && ($existant->compte_confirme || $existant->role !== 'Client')) {
+        $existant = Utilisateur::withTrashed()->where('telephone', $request->telephone)->first();
+        if ($existant && ($existant->trashed() || $existant->compte_confirme || $existant->role !== 'Client')) {
             return response()->json(['message' => 'Ce numéro de téléphone est déjà utilisé.'], 422);
         }
         if ($request->filled('email') && Utilisateur::where('email', $request->email)->when($existant, fn ($q) => $q->whereKeyNot($existant->id))->exists()) {
@@ -137,6 +138,27 @@ class AuthController extends Controller
             'user' => $user,
             'token' => $token,
         ], 200);
+    }
+
+    /**
+     * Suppression du compte par le client lui-même (mot de passe redemandé).
+     * DELETE /api/compte
+     */
+    public function supprimerCompte(Request $request)
+    {
+        $user = $request->user();
+        $request->validate(['mot_de_passe' => 'required|string'], ['mot_de_passe.required' => 'Saisissez votre mot de passe pour confirmer.']);
+
+        if ($user->role !== 'Client') {
+            return response()->json(['message' => 'Les comptes du personnel sont supprimés par l\'administration de l\'agence.'], 403);
+        }
+        if (! Hash::check($request->mot_de_passe, $user->mot_de_passe)) {
+            return response()->json(['message' => 'Mot de passe incorrect.'], 422);
+        }
+
+        SuppressionCompte::client($user);
+
+        return response()->json(['message' => 'Votre compte a été supprimé.']);
     }
 
     /**

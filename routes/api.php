@@ -128,6 +128,7 @@ Route::middleware('auth:canadian-api')->prefix('canadian')->group(function () {
     // ────────────────────────────────────────────────────────
     Route::get('/profile',  [CanadianClientController::class, 'profile']);
     Route::post('/logout',  [CanadianClientController::class, 'logout']);
+    Route::delete('/compte', [CanadianClientController::class, 'supprimerCompte'])->middleware('throttle:connexion');
 
     // ────────────────────────────────────────────────────────
     // Vols
@@ -183,6 +184,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Profil
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::delete('/compte', [AuthController::class, 'supprimerCompte'])->middleware('throttle:connexion');
 
     // Upload d'images (Google Cloud Storage)
     Route::post('/upload', [ImageController::class, 'upload']);

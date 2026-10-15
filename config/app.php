@@ -4,6 +4,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Adresse de contact affichée dans la politique de confidentialité
+    'contact_email' => env('CONTACT_EMAIL', 'contact@mobembo-line.site'),
+
     'env' => env('APP_ENV', 'production'),
 
     'debug' => (bool) env('APP_DEBUG', false),

@@ -438,6 +438,24 @@ class CanadianClientController extends Controller
     // ═══════════════════════════════════════════════════════════════
     // LOGOUT
     // ═══════════════════════════════════════════════════════════════
+    /**
+     * Suppression du compte par le client lui-même (mot de passe redemandé).
+     * DELETE /api/canadian/compte
+     */
+    public function supprimerCompte(Request $request)
+    {
+        $user = $request->user();
+        $request->validate(['mot_de_passe' => 'required|string'], ['mot_de_passe.required' => 'Saisissez votre mot de passe pour confirmer.']);
+
+        if (! \Illuminate\Support\Facades\Hash::check($request->mot_de_passe, $user->password)) {
+            return response()->json(['message' => 'Mot de passe incorrect.'], 422);
+        }
+
+        \App\Support\SuppressionCompte::canadien($user);
+
+        return response()->json(['message' => 'Votre compte a été supprimé.']);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();

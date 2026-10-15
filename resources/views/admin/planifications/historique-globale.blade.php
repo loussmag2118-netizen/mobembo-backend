@@ -17,10 +17,10 @@
                 <span class="p-3 rounded-2xl bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center text-2xl shadow-sm">
                     <i class="fa-solid fa-cash-register"></i>
                 </span>
-                <span>Historique Global des Ventes & Gares</span>
+                <span>Historique Global des Ventes & Agences</span>
             </h1>
             <p class="text-slate-500 text-base mt-2 ml-[64px]">
-                Consolidation des flux billetterie et des clients enregistrés par gare.
+                Consolidation des flux billetterie et des clients enregistrés par agence.
             </p>
         </div>
 
@@ -36,7 +36,7 @@
     @if(isset($donneesGares) && count($donneesGares) > 0)
         @foreach($donneesGares as $item)
             @php
-                $gareNom = $item['gare']->nom_gare ?? $item['gare']->nom ?? 'Gare';
+                $gareNom = $item['gare']->nom_gare ?? $item['gare']->nom ?? 'Agence';
                 $ticketsCount = $item['tickets']->count();
                 $montantTotal = $item['tickets']->sum('prix');
             @endphp
@@ -125,7 +125,7 @@
                     @else
                         <div class="py-12 text-center text-slate-400">
                             <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-300"></i>
-                            <p class="text-sm font-bold text-slate-600">Aucune vente enregistrée dans cette gare pour le moment.</p>
+                            <p class="text-sm font-bold text-slate-600">Aucune vente enregistrée dans cette agence pour le moment.</p>
                         </div>
                     @endif
                 </div>

@@ -21,7 +21,7 @@
                 <span>Ajouter une Nouvelle Ligne</span>
             </h1>
             <p class="text-slate-500 text-base mt-2 ml-[64px]">
-                Configurez les gares de départ et d'arrivée, associez un bus et définissez les horaires.
+                Configurez les agences de départ et d'arrivée, associez un bus et définissez les horaires.
             </p>
         </div>
     </div>

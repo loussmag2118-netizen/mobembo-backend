@@ -35,15 +35,15 @@
                     @php $gareChoisie = $gares->firstWhere('id', (int) old('gare_depart_id', $trajet->gare_depart_id ?? 0)); @endphp
                     <div id="ville_depart_affichee"
                          class="w-full pl-11 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700">
-                        {{ $gareChoisie->ville ?? '— choisissez une gare —' }}
+                        {{ $gareChoisie->ville ?? '— choisissez une agence —' }}
                     </div>
                 </div>
-                <p class="text-[11px] text-slate-500">Déduite automatiquement de la gare.</p>
+                <p class="text-[11px] text-slate-500">Déduite automatiquement de l'agence.</p>
             </div>
 
             <div class="space-y-1.5">
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Gare de départ <span class="text-rose-500">*</span>
+                    Agence de départ <span class="text-rose-500">*</span>
                 </label>
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
@@ -52,7 +52,7 @@
                     <select name="gare_depart_id" id="gare_depart_id"
                             class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all @error('gare_depart_id') border-rose-300 ring-rose-500 @enderror"
                             required>
-                        <option value="">-- Choisir une gare --</option>
+                        <option value="">-- Choisir une agence --</option>
                         @foreach($gares->groupBy('ville') as $nomVille => $garesVille)
                             <optgroup label="{{ $nomVille }}">
                                 @foreach($garesVille as $gare)
@@ -94,15 +94,15 @@
                     @php $gareChoisie = $gares->firstWhere('id', (int) old('gare_arrivee_id', $trajet->gare_arrivee_id ?? 0)); @endphp
                     <div id="ville_arrivee_affichee"
                          class="w-full pl-11 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700">
-                        {{ $gareChoisie->ville ?? '— choisissez une gare —' }}
+                        {{ $gareChoisie->ville ?? '— choisissez une agence —' }}
                     </div>
                 </div>
-                <p class="text-[11px] text-slate-500">Déduite automatiquement de la gare.</p>
+                <p class="text-[11px] text-slate-500">Déduite automatiquement de l'agence.</p>
             </div>
 
             <div class="space-y-1.5">
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Gare d'arrivée <span class="text-rose-500">*</span>
+                    Agence d'arrivée <span class="text-rose-500">*</span>
                 </label>
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
@@ -111,7 +111,7 @@
                     <select name="gare_arrivee_id" id="gare_arrivee_id"
                             class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all @error('gare_arrivee_id') border-rose-300 ring-rose-500 @enderror"
                             required>
-                        <option value="">-- Choisir une gare --</option>
+                        <option value="">-- Choisir une agence --</option>
                         @foreach($gares->groupBy('ville') as $nomVille => $garesVille)
                             <optgroup label="{{ $nomVille }}">
                                 @foreach($garesVille as $gare)
@@ -179,12 +179,31 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @php
+                $dureeTotale = old('duree_heures') !== null || old('duree_mins') !== null
+                    ? null
+                    : ($trajet->duree_minutes ?? null);
+                $dureeH = old('duree_heures', $dureeTotale !== null ? intdiv($dureeTotale, 60) : '');
+                $dureeM = (int) old('duree_mins', $dureeTotale !== null ? $dureeTotale % 60 : 0);
+            @endphp
             <div class="space-y-2">
-                <label for="duree_minutes" class="block text-xs font-bold uppercase tracking-wider text-slate-700">Durée estimée (minutes)</label>
-                <input type="number" name="duree_minutes" id="duree_minutes" min="10" max="4320" step="5"
-                       value="{{ old('duree_minutes', $trajet->duree_minutes ?? '') }}" placeholder="Ex. 300 pour 5 h"
-                       class="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <label for="duree_heures" class="block text-xs font-bold uppercase tracking-wider text-slate-700">Durée estimée</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" name="duree_heures" id="duree_heures" min="0" max="72" step="1" inputmode="numeric"
+                           value="{{ $dureeH }}" placeholder="5"
+                           class="w-24 px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                    <span class="text-sm font-bold text-slate-500">h</span>
+                    <select name="duree_mins" aria-label="Minutes"
+                            class="w-24 px-3 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                        @foreach(range(0, 55, 5) as $m)
+                            <option value="{{ $m }}" @selected($dureeM === $m)>{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}</option>
+                        @endforeach
+                    </select>
+                    <span class="text-sm font-bold text-slate-500">min</span>
+                </div>
+                <p class="text-xs text-slate-500 font-semibold">Ex. 5 h 30 pour Brazzaville → Pointe-Noire. Laissez les heures vides si inconnue.</p>
                 @error('duree_minutes') <p class="text-rose-600 text-xs font-bold">{{ $message }}</p> @enderror
+                @error('duree_heures') <p class="text-rose-600 text-xs font-bold">{{ $message }}</p> @enderror
             </div>
             <div class="space-y-2">
                 <label for="bagages_autorises" class="block text-xs font-bold uppercase tracking-wider text-slate-700">Bagages autorisés</label>
@@ -287,7 +306,7 @@
 
                 select.addEventListener('change', function () {
                     const opt = this.options[this.selectedIndex];
-                    affichage.textContent = opt.getAttribute('data-ville') || '— choisissez une gare —';
+                    affichage.textContent = opt.getAttribute('data-ville') || '— choisissez une agence —';
                 });
             });
     });

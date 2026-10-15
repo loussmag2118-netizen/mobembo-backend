@@ -36,7 +36,7 @@
                     <i class="fa-solid fa-building"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase">Gare de service</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase">Agence de service</p>
                     <p class="text-sm font-extrabold text-slate-900">{{ $agent->gare->nom_gare }} ({{ $agent->gare->ville }})</p>
                 </div>
             </div>

@@ -55,6 +55,7 @@ class TrajetController extends Controller
      */
     public function store(Request $request)
     {
+        $this->fusionnerDuree($request);
         $agenceId = Auth::user()->agence_id;
 
         $request->validate([
@@ -67,7 +68,7 @@ class TrajetController extends Controller
                 function ($attr, $value, $fail) use ($agenceId) {
                     $gare = Gare::find($value);
                     if (!$gare || (int) $gare->agence_id !== (int) $agenceId) {
-                        $fail('La gare de départ est invalide.');
+                        $fail('L\'agence de départ est invalide.');
                     }
                 },
             ],
@@ -76,7 +77,7 @@ class TrajetController extends Controller
                 function ($attr, $value, $fail) use ($agenceId) {
                     $gare = Gare::find($value);
                     if (!$gare || (int) $gare->agence_id !== (int) $agenceId) {
-                        $fail('La gare d\'arrivée est invalide.');
+                        $fail('L\'agence d\'arrivée est invalide.');
                     }
                 },
             ],
@@ -91,12 +92,18 @@ class TrajetController extends Controller
             ],
             'horaires'        => 'required|array|min:1',
             'horaires.*'      => 'required|date_format:H:i',
+            'duree_heures'      => 'nullable|integer|min:0|max:72',
+            'duree_mins'        => 'nullable|integer|min:0|max:59',
             'duree_minutes'     => 'nullable|integer|min:10|max:4320',
             'bagages_autorises' => 'nullable|string|max:255',
             'conditions_voyage' => 'nullable|string|max:2000',
         ], [
-            'gare_depart_id.unique'     => 'Un trajet identique (même gare de départ et d\'arrivée) existe déjà pour cette agence.',
-            'gare_arrivee_id.different' => 'La gare d\'arrivée doit être différente de la gare de départ.',
+            'duree_minutes.min' => 'La durée doit être d\'au moins 10 minutes.',
+            'duree_minutes.max' => 'La durée ne peut pas dépasser 72 heures.',
+            'duree_heures.max'  => 'La durée ne peut pas dépasser 72 heures.',
+            'horaires.*.date_format' => 'Heure invalide : utilisez le format HH:MM (minutes de 00 à 59).',
+            'gare_depart_id.unique'     => 'Un trajet identique (même agence de départ et d\'arrivée) existe déjà.',
+            'gare_arrivee_id.different' => 'L\'agence d\'arrivée doit être différente de l\'agence de départ.',
         ]);
 
         [$villeDepart, $villeArrivee] = $this->villesDesGares($request);
@@ -158,6 +165,7 @@ class TrajetController extends Controller
      */
     public function update(Request $request, Trajet $trajet)
     {
+        $this->fusionnerDuree($request);
         $this->authorizeAgence($trajet);
         $agenceId = Auth::user()->agence_id;
 
@@ -172,7 +180,7 @@ class TrajetController extends Controller
                 function ($attr, $value, $fail) use ($agenceId) {
                     $gare = Gare::find($value);
                     if (!$gare || (int) $gare->agence_id !== (int) $agenceId) {
-                        $fail('La gare de départ est invalide.');
+                        $fail('L\'agence de départ est invalide.');
                     }
                 },
             ],
@@ -181,7 +189,7 @@ class TrajetController extends Controller
                 function ($attr, $value, $fail) use ($agenceId) {
                     $gare = Gare::find($value);
                     if (!$gare || (int) $gare->agence_id !== (int) $agenceId) {
-                        $fail('La gare d\'arrivée est invalide.');
+                        $fail('L\'agence d\'arrivée est invalide.');
                     }
                 },
             ],
@@ -196,12 +204,18 @@ class TrajetController extends Controller
             ],
             'horaires'        => 'required|array|min:1',
             'horaires.*'      => 'required|date_format:H:i',
+            'duree_heures'      => 'nullable|integer|min:0|max:72',
+            'duree_mins'        => 'nullable|integer|min:0|max:59',
             'duree_minutes'     => 'nullable|integer|min:10|max:4320',
             'bagages_autorises' => 'nullable|string|max:255',
             'conditions_voyage' => 'nullable|string|max:2000',
         ], [
-            'gare_depart_id.unique'     => 'Un trajet identique (même gare de départ et d\'arrivée) existe déjà pour cette agence.',
-            'gare_arrivee_id.different' => 'La gare d\'arrivée doit être différente de la gare de départ.',
+            'duree_minutes.min' => 'La durée doit être d\'au moins 10 minutes.',
+            'duree_minutes.max' => 'La durée ne peut pas dépasser 72 heures.',
+            'duree_heures.max'  => 'La durée ne peut pas dépasser 72 heures.',
+            'horaires.*.date_format' => 'Heure invalide : utilisez le format HH:MM (minutes de 00 à 59).',
+            'gare_depart_id.unique'     => 'Un trajet identique (même agence de départ et d\'arrivée) existe déjà.',
+            'gare_arrivee_id.different' => 'L\'agence d\'arrivée doit être différente de l\'agence de départ.',
         ]);
 
         [$villeDepart, $villeArrivee] = $this->villesDesGares($request);
@@ -312,7 +326,7 @@ class TrajetController extends Controller
 
         if (mb_strtolower(trim($villeDepart)) === mb_strtolower(trim($villeArrivee))) {
             throw ValidationException::withMessages([
-                'gare_arrivee_id' => "Les deux gares sont à {$villeDepart} : la ville d'arrivée doit être différente de la ville de départ.",
+                'gare_arrivee_id' => "Les deux agences sont à {$villeDepart} : la ville d'arrivée doit être différente de la ville de départ.",
             ]);
         }
 
@@ -409,6 +423,27 @@ class TrajetController extends Controller
             return response()->json($trajets, 200);
         } catch (Throwable $e) {
             return response()->json(['message' => 'Erreur : ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Durée saisie en heures + minutes (0 à 59) → minutes totales.
+     * Heures vides et minutes à 0 : durée non renseignée.
+     */
+    private function fusionnerDuree(Request $request): void
+    {
+        if (! $request->has('duree_heures') && ! $request->has('duree_mins')) {
+            return;
+        }
+        $h = $request->input('duree_heures');
+        $m = (int) $request->input('duree_mins', 0);
+        if (($h === null || $h === '') && $m === 0) {
+            $request->merge(['duree_minutes' => null]);
+
+            return;
+        }
+        if (is_numeric($h) && $m >= 0 && $m <= 59) {
+            $request->merge(['duree_minutes' => (int) $h * 60 + $m]);
         }
     }
 }

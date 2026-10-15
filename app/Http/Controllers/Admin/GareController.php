@@ -146,7 +146,7 @@ class GareController extends Controller
             'nom_gare' => 'required|string|max:100',
             'ville_id' => 'required|integer',
         ], [
-            'ville_id.required' => 'Veuillez choisir la ville de la gare.',
+            'ville_id.required' => 'Veuillez choisir la ville de l\'agence.',
         ]);
 
         $ville = $this->villesProposees($gare)->firstWhere('id', (int) $request->ville_id);
@@ -165,7 +165,7 @@ class GareController extends Controller
 
         if ($doublon) {
             throw ValidationException::withMessages([
-                'nom_gare' => "Votre agence a déjà une gare portant ce nom à {$ville->nom}.",
+                'nom_gare' => "Vous avez déjà une agence portant ce nom à {$ville->nom}.",
             ]);
         }
 
@@ -177,6 +177,6 @@ class GareController extends Controller
      */
     private function authorizeAgence(Gare $gare): void
     {
-        abort_if($gare->agence_id !== Auth::user()->agence_id, 403, 'Accès non autorisé à cette gare.');
+        abort_if($gare->agence_id !== Auth::user()->agence_id, 403, 'Accès non autorisé à cette agence.');
     }
 }

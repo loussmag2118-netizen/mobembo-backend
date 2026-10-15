@@ -145,9 +145,9 @@
                         <i class="fa-solid fa-arrow-up-from-bracket"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase">Gare de départ</p>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Agence de départ</p>
                         <p class="text-base font-extrabold text-slate-900">
-                            {{ $planificationVoyage->trajet->gareDepart->nom_gare ?? 'Gare Départ' }}
+                            {{ $planificationVoyage->trajet->gareDepart->nom_gare ?? 'Agence de départ' }}
                         </p>
                         <p class="text-xs font-semibold text-slate-500">
                             Ville : {{ $planificationVoyage->trajet->ville_depart ?? $planificationVoyage->trajet->gareDepart->ville ?? '?' }}
@@ -160,9 +160,9 @@
                         <i class="fa-solid fa-location-dot"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase">Gare d'arrivée</p>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Agence d'arrivée</p>
                         <p class="text-base font-extrabold text-slate-900">
-                            {{ $planificationVoyage->trajet->gareArrivee->nom_gare ?? 'Gare Arrivée' }}
+                            {{ $planificationVoyage->trajet->gareArrivee->nom_gare ?? 'Agence d\'arrivée' }}
                         </p>
                         <p class="text-xs font-semibold text-slate-500">
                             Ville : {{ $planificationVoyage->trajet->ville_arrivee ?? $planificationVoyage->trajet->gareArrivee->ville ?? '?' }}

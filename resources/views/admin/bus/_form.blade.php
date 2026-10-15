@@ -18,10 +18,14 @@
             </div>
             <input type="text" name="immatriculation"
                    value="{{ old('immatriculation', $bus->immatriculation ?? '') }}"
-                   placeholder="Ex: 123-AB-45"
+                   placeholder="Ex : 123 AB 4"
+                   maxlength="20"
+                   pattern="\s*(RC)?\s*[0-9]{3}[\s.\-]*[A-Za-z]{2}[\s.\-]*([1-9]|1[0-6])\s*"
+                   title="3 chiffres, 2 lettres et le numéro de circonscription (1 à 16), ex. 123 AB 4"
                    required
                    class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all uppercase font-mono">
         </div>
+        <p class="text-xs text-slate-500 font-semibold">Format congolais : 3 chiffres, 2 lettres, puis la circonscription (4 = Brazzaville, 6 = Pointe-Noire, 10 = Dolisie…).</p>
         @error('immatriculation')
             <p class="mt-1 text-xs font-bold text-rose-600">{{ $message }}</p>
         @enderror

@@ -62,8 +62,8 @@ class AgentController extends Controller
             'telephone.regex'   => 'Le téléphone doit être au format 06XXXXXXX (9 chiffres).',
             'telephone.unique'  => 'Ce numéro de téléphone est déjà utilisé.',
             'code_acces_agent.unique' => 'La valeur du champ code acces agent est déjà utilisée.',
-            'gare_id.required'  => 'Veuillez assigner une gare à cet agent.',
-            'gare_id.exists'    => 'La gare sélectionnée est invalide.',
+            'gare_id.required'  => 'Veuillez assigner une agence à cet agent.',
+            'gare_id.exists'    => 'L\'agence sélectionnée est invalide.',
         ]);
 
         // Sécurité supplémentaire : vérifier que la gare appartient bien à l'agence de l'admin
@@ -97,7 +97,7 @@ class AgentController extends Controller
 
         return redirect()
             ->route('admin.agents.index')
-            ->with('success', 'Agent créé, rattaché à sa gare et à votre agence avec succès.')
+            ->with('success', 'Agent créé et rattaché à son agence avec succès.')
             ->with('mot_de_passe_temporaire', [
                 'compte'       => "{$agentCree->prenom} {$agentCree->nom} ({$agentCree->telephone})",
                 'mot_de_passe' => $motDePasse,
@@ -145,7 +145,7 @@ class AgentController extends Controller
             'telephone.regex'   => 'Le téléphone doit être au format 06XXXXXXX (9 chiffres).',
             'telephone.unique'  => 'Ce numéro de téléphone est déjà utilisé.',
             'code_acces_agent.unique' => 'La valeur du champ code acces agent est déjà utilisée.',
-            'gare_id.required'  => 'Veuillez assigner une gare à cet agent.',
+            'gare_id.required'  => 'Veuillez assigner une agence à cet agent.',
         ]);
 
         // Vérifier que la nouvelle gare appartient bien à l'agence

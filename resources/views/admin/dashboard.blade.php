@@ -327,7 +327,7 @@
                                         {{ $ag->prenom }} {{ $ag->nom }}
                                     </p>
                                     <p class="text-xs text-slate-400 truncate font-medium">
-                                        {{ $ag->gare->nom_gare ?? 'Gare Principale' }}
+                                        {{ $ag->gare->nom_gare ?? 'Agence principale' }}
                                     </p>
                                 </div>
                             </div>

@@ -19,7 +19,7 @@
 
     {{-- Chiffres clés --}}
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        @foreach([['Statut', $agence->statut], ['Agents', $agence->agents_count], ['Bus', $agence->bus_count], ['Gares', $agence->gares_count], ['Trajets', $agence->trajets_count]] as [$t, $v])
+        @foreach([['Statut', $agence->statut], ['Agents', $agence->agents_count], ['Bus', $agence->bus_count], ['Agences', $agence->gares_count], ['Trajets', $agence->trajets_count]] as [$t, $v])
             <div class="bg-white rounded-2xl border border-slate-200/80 p-4">
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ $t }}</p>
                 <p class="text-xl font-black {{ $t === 'Statut' ? ($v === 'Actif' ? 'text-emerald-600' : 'text-rose-600') : 'text-slate-900' }}">{{ $v }}</p>

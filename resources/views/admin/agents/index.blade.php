@@ -15,7 +15,7 @@
                 <span>Agents de Guichet & Contrôleurs</span>
             </h1>
             <p class="text-slate-500 text-base mt-2 ml-[64px]">
-                Gérez les comptes opérationnels, codes d'accès et affectations aux gares.
+                Gérez les comptes opérationnels, codes d'accès et affectations aux agences.
             </p>
         </div>
 
@@ -44,7 +44,7 @@
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
                 <input type="text" 
                        x-model="searchQuery" 
-                       placeholder="Rechercher par nom, téléphone, gare, ville..." 
+                       placeholder="Rechercher par nom, téléphone, agence, ville..." 
                        class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
             </div>
 
@@ -76,7 +76,7 @@
                 <thead>
                     <tr class="bg-slate-50/70 border-b border-slate-100 text-xs font-black uppercase tracking-wider text-slate-500">
                         <th class="py-4 px-8">Agent</th>
-                        <th class="py-4 px-8">Gare / Station Rattachée</th>
+                        <th class="py-4 px-8">Agence / Station Rattachée</th>
                         <th class="py-4 px-8">Téléphone</th>
                         <th class="py-4 px-8">Code d'accès</th>
                         <th class="py-4 px-8">Statut</th>
@@ -120,7 +120,7 @@
                                     <i class="fa-solid fa-city text-[10px]"></i> {{ $agent->gare->ville }}
                                 </div>
                             @else
-                                <span class="text-sm text-slate-400 italic">Aucune gare assignée</span>
+                                <span class="text-sm text-slate-400 italic">Aucune agence assignée</span>
                             @endif
                         </td>
 

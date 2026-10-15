@@ -13,7 +13,7 @@
                 <span>Lignes & Trajets de Voyage</span>
             </h1>
             <p class="text-slate-500 text-base mt-2 ml-[64px]">
-                Configurez les gares de départ, d'arrivée, les vagues et les bus affectés.
+                Configurez les agences de départ, d'arrivée, les vagues et les bus affectés.
             </p>
         </div>
 
@@ -40,7 +40,7 @@
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
                 <input type="text" 
                        x-model="searchQuery" 
-                       placeholder="Rechercher une ville, une gare..." 
+                       placeholder="Rechercher une ville, une agence..." 
                        class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all">
             </div>
 
@@ -54,7 +54,7 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50/70 border-b border-slate-100 text-xs font-black uppercase tracking-wider text-slate-500">
-                        <th class="py-4 px-8">Ligne & Gares</th>
+                        <th class="py-4 px-8">Ligne & Agences</th>
                         <th class="py-4 px-8">Bus Assigné</th>
                         <th class="py-4 px-8">Horaires de Départ</th>
                         <th class="py-4 px-8 text-right">Actions</th>
@@ -77,9 +77,9 @@
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-2 font-extrabold text-slate-900 text-base">
-                                        <span>{{ $t->gareDepart->nom_gare ?? 'Gare Départ' }}</span>
+                                        <span>{{ $t->gareDepart->nom_gare ?? 'Agence de départ' }}</span>
                                         <i class="fa-solid fa-arrow-right text-sm text-teal-500"></i>
-                                        <span>{{ $t->gareArrivee->nom_gare ?? 'Gare Arrivée' }}</span>
+                                        <span>{{ $t->gareArrivee->nom_gare ?? 'Agence d\'arrivée' }}</span>
                                     </div>
                                     <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1 font-semibold">
                                         <i class="fa-solid fa-location-dot text-xs"></i>

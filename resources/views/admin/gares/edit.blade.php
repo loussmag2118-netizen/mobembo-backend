@@ -11,7 +11,7 @@
                 <a href="{{ route('admin.gares.index') }}" 
                    class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-700 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm transition-all">
                     <i class="fa-solid fa-arrow-left text-xs"></i>
-                    <span>Retour aux gares</span>
+                    <span>Retour aux agences</span>
                 </a>
                 <span class="text-xs font-extrabold text-slate-400">/</span>
                 <span class="text-xs font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/60">
@@ -22,7 +22,7 @@
                 <span class="p-3 rounded-2xl bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center text-2xl shadow-sm">
                     <i class="fa-solid fa-pen-to-square"></i>
                 </span>
-                <span>Modifier la Gare : {{ $gare->nom_gare }}</span>
+                <span>Modifier l'agence : {{ $gare->nom_gare }}</span>
             </h1>
             <p class="text-slate-500 text-base mt-2 ml-[64px]">
                 Toutes les lignes et planifications rattachées seront actualisées automatiquement.
@@ -47,7 +47,7 @@
                 <button type="submit"
                         class="bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white px-7 py-3.5 rounded-2xl text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2">
                     <i class="fa-solid fa-floppy-disk text-amber-400 text-base"></i>
-                    <span>Mettre à jour la gare</span>
+                    <span>Mettre à jour l'agence</span>
                 </button>
             </div>
         </form>

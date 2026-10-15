@@ -10,7 +10,7 @@
     {{-- NOM DE LA GARE --}}
     <div class="space-y-2">
         <label class="block text-sm font-extrabold text-slate-900">
-            Nom de la gare ou du terminal <span class="text-rose-500">*</span>
+            Nom de l'agence ou du terminal <span class="text-rose-500">*</span>
         </label>
         <div class="relative">
             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
@@ -18,7 +18,7 @@
             </div>
             <input type="text" name="nom_gare"
                    value="{{ old('nom_gare', $gare->nom_gare ?? '') }}"
-                   placeholder="Ex: Gare Centrale Mpila, Agence Moukondo, Gare Océan du Nord"
+                   placeholder="Ex: Agence Centrale Mpila, Agence Moukondo, Agence Océan du Nord"
                    required
                    class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
         </div>

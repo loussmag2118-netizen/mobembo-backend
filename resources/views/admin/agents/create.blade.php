@@ -48,7 +48,7 @@
             {{-- GARE DE RATTACHEMENT --}}
             <div class="space-y-2">
                 <label for="gare_id" class="block text-sm font-extrabold text-slate-900">
-                    Gare / Station de rattachement <span class="text-rose-500">*</span>
+                    Agence / Station de rattachement <span class="text-rose-500">*</span>
                 </label>
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
@@ -56,7 +56,7 @@
                     </div>
                     <select id="gare_id" name="gare_id" required
                             class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
-                        <option value="">-- Sélectionner une gare --</option>
+                        <option value="">-- Sélectionner une agence --</option>
                         @foreach($gares->groupBy('ville') as $nomVille => $garesVille)
                             <optgroup label="{{ $nomVille }}">
                                 @foreach($garesVille as $gare)

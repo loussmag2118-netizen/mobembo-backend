@@ -59,7 +59,7 @@ class VilleController extends Controller
         $ville->synchroniserNom();
 
         return redirect()->route('superadmin.villes.index')
-            ->with('success', 'Ville renommée. Les gares et trajets concernés ont été mis à jour.');
+            ->with('success', 'Ville renommée. Les agences et trajets concernés ont été mis à jour.');
     }
 
     /**
@@ -78,7 +78,7 @@ class VilleController extends Controller
     {
         if ($ville->gares()->exists()) {
             return redirect()->route('superadmin.villes.index')
-                ->with('error', "Impossible de supprimer {$ville->nom} : des gares y sont rattachées. Désactivez-la plutôt.");
+                ->with('error', "Impossible de supprimer {$ville->nom} : des agences y sont rattachées. Désactivez-la plutôt.");
         }
 
         $ville->delete();

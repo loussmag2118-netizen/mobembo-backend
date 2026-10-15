@@ -46,7 +46,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-black text-slate-900">Photos</h2>
-                    <p class="text-xs text-slate-500 font-semibold mt-1">Vos bus, vos gares, vos équipes… Elles défilent en haut de votre page ({{ $photos->count() }} / {{ $photosMax }}).</p>
+                    <p class="text-xs text-slate-500 font-semibold mt-1">Vos bus, vos agences, vos équipes… Elles défilent en haut de votre page ({{ $photos->count() }} / {{ $photosMax }}).</p>
                 </div>
                 @if($photos->count() < $photosMax)
                     <form action="{{ route('admin.vitrine.photos.store') }}" method="POST" enctype="multipart/form-data" data-compresser="1600">

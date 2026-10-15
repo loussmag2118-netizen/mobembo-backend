@@ -3,7 +3,7 @@
 @section('title', 'Villes desservies')
 @section('header_icon', 'fa-city')
 @section('header_title', 'Villes du Réseau Terrestre')
-@section('header_subtitle', 'Référentiel commun : les agences rattachent leurs gares à ces villes')
+@section('header_subtitle', 'Référentiel commun : les compagnies rattachent leurs agences à ces villes')
 
 @section('content')
 <div class="space-y-6" x-data="{ searchQuery: '', editId: null }">
@@ -48,7 +48,7 @@
 
         <div class="card-hover bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
             <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Gares rattachées</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Agences rattachées</span>
                 <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
                     <i class="fa-solid fa-location-dot"></i>
                 </div>
@@ -65,7 +65,7 @@
             <span>Nouvelle ville</span>
         </h2>
         <p class="text-xs text-slate-500 mt-0.5 mb-5">
-            Une fois ajoutée, la ville apparaît dans le formulaire « Gare » de toutes les agences.
+            Une fois ajoutée, la ville est proposée à toutes les compagnies pour créer leurs agences.
         </p>
 
         <form action="{{ route('superadmin.villes.store') }}" method="POST" class="flex flex-col sm:flex-row gap-3">
@@ -88,7 +88,7 @@
                     <i class="fa-solid fa-list-check text-slate-700"></i>
                     <span>Liste des villes ({{ $stats['villes'] }})</span>
                 </h2>
-                <p class="text-xs text-slate-500 mt-0.5">Une ville désactivée n'est plus proposée pour les nouvelles gares ; les gares existantes continuent de fonctionner.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Une ville désactivée n'est plus proposée pour les nouvelles agences ; les agences existantes continuent de fonctionner.</p>
             </div>
 
             <div class="relative w-full sm:w-72">
@@ -103,7 +103,7 @@
                 <thead>
                     <tr class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                         <th class="py-3.5 px-6">Ville</th>
-                        <th class="py-3.5 px-6">Gares</th>
+                        <th class="py-3.5 px-6">Agences</th>
                         <th class="py-3.5 px-6">Agences présentes</th>
                         <th class="py-3.5 px-6">Statut</th>
                         <th class="py-3.5 px-6 text-right">Actions</th>
@@ -124,7 +124,7 @@
                                 </div>
                                 <form x-show="editId === {{ $ville->id }}" style="display: none;"
                                       action="{{ route('superadmin.villes.update', $ville) }}" method="POST" class="flex items-center gap-2"
-                                      onsubmit="return confirm('Renommer cette ville ? Les gares et trajets de toutes les agences seront mis à jour.');">
+                                      onsubmit="return confirm('Renommer cette ville ? Les agences et trajets de toutes les compagnies seront mis à jour.');">
                                     @csrf
                                     @method('PUT')
                                     <input type="text" name="nom" value="{{ $ville->nom }}" required maxlength="100"

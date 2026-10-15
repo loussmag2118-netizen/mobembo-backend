@@ -87,21 +87,6 @@
                         <img src="{{ asset('images/logo-mobembo-blanc.png') }}" alt="Mobembo Line — Vente &amp; achat de tickets"
                              class="w-48 md:w-72 h-auto drop-shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
                     </div>
-
-                    <ul class="hidden md:flex justify-center gap-6 text-xs text-white/90">
-                        <li class="flex items-center gap-2">
-                            <span class="grid h-7 w-7 place-items-center rounded-lg bg-white/15 ring-1 ring-white/20"><i class="fa-solid fa-route text-[11px]"></i></span>
-                            Trajets
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="grid h-7 w-7 place-items-center rounded-lg bg-white/15 ring-1 ring-white/20"><i class="fa-solid fa-ticket text-[11px]"></i></span>
-                            Billets
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="grid h-7 w-7 place-items-center rounded-lg bg-white/15 ring-1 ring-white/20"><i class="fa-solid fa-user-group text-[11px]"></i></span>
-                            Agents
-                        </li>
-                    </ul>
                 </div>
 
                 {{-- Courbe blanche (ordinateur) --}}

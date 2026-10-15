@@ -83,6 +83,29 @@ class Ticket extends Model
     /**
      * L'agence propriétaire du ticket.
      */
+    /**
+     * Jeton du QR lu par un scan : « MBL:<jeton> » ou l'URL publique
+     * « …/billet/<jeton> ». Null pour une saisie de référence.
+     */
+    public static function jetonDepuisCode(string $code): ?string
+    {
+        $code = trim($code);
+        if (str_starts_with($code, 'MBL:')) {
+            return substr($code, 4);
+        }
+        if (preg_match('#/billet/([A-Za-z0-9]{64})/?(?:[?\#].*)?$#', $code, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    /** Adresse ouverte en scannant le QR du billet. */
+    public function urlPublique(): ?string
+    {
+        return $this->qr_code_token ? route('billet.public', $this->qr_code_token) : null;
+    }
+
     public function agence()
     {
         return $this->belongsTo(Agence::class, 'agence_id');

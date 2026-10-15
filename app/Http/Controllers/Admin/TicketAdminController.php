@@ -116,12 +116,13 @@ class TicketAdminController extends Controller
         return ($user && $user->agence_id && in_array($user->role, ['Agent', 'Admin'], true)) ? $user : null;
     }
 
-    /** Billet de l'agence, par référence ou par jeton de QR (« MBL:… »). */
+    /** Billet de l'agence, par référence ou par jeton de QR (« MBL:… » ou URL du billet). */
     private function billetDeLAgence(string $code, int $agenceId): ?Ticket
     {
         $code = trim($code);
-        $colonne = str_starts_with($code, 'MBL:') ? 'qr_code_token' : 'reference_ticket';
-        $valeur  = str_starts_with($code, 'MBL:') ? substr($code, 4) : $code;
+        $jeton   = Ticket::jetonDepuisCode($code);
+        $colonne = $jeton !== null ? 'qr_code_token' : 'reference_ticket';
+        $valeur  = $jeton ?? $code;
 
         return Ticket::where($colonne, $valeur)->where('agence_id', $agenceId)->first();
     }

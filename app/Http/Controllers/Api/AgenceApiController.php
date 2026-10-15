@@ -14,7 +14,8 @@ class AgenceApiController extends Controller
      */
     public function index()
     {
-        $agences = Agence::where('statut', 'Actif')
+        $agences = Agence::with(['logoMedia', 'photos'])
+            ->where('statut', 'Actif')
             ->orderBy('nom_agence')
             ->get()
             ->map(function ($a) {
@@ -23,6 +24,8 @@ class AgenceApiController extends Controller
                     'nom'              => $a->nom_agence,
                     'nom_agence'       => $a->nom_agence,
                     'logo'             => $a->logo_app,
+                    // Vitrine gérée par l'agence (logo, couleur, slogan, photos)
+                    'vitrine'          => $a->vitrine(),
                     'date_partenariat' => $a->date_partenariat,
                     'statut'           => $a->statut,
                 ];

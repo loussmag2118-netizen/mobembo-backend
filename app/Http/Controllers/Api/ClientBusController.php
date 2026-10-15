@@ -60,7 +60,7 @@ class ClientBusController extends Controller
         $depart    = mb_strtolower(trim($request->ville_depart));
         $arrivee   = mb_strtolower(trim($request->ville_arrivee));
 
-        $departs = PlanificationVoyage::with(['agence', 'trajet.gareDepart', 'trajet.gareArrivee', 'vagueDepart'])
+        $departs = PlanificationVoyage::with(['agence.logoMedia', 'trajet.gareDepart', 'trajet.gareArrivee', 'vagueDepart'])
             ->where('statut_voyage', 'Programmation')
             ->whereDate('date_voyage', $request->date)
             ->where('places_disponibles', '>=', $passagers)
@@ -83,7 +83,7 @@ class ClientBusController extends Controller
             ->values()
             ->map(fn (PlanificationVoyage $v) => [
                 'planification_id'   => $v->id,
-                'agence'             => ['id' => $v->agence?->id, 'nom' => $v->agence?->nom_agence, 'logo' => $v->agence?->logo_app],
+                'agence'             => ['id' => $v->agence?->id, 'nom' => $v->agence?->nom_agence, 'logo' => $v->agence?->logo_app, 'logo_url' => $v->agence?->logoMedia?->url(), 'couleur' => $v->agence?->couleur],
                 'ville_depart'       => $v->trajet?->ville_depart,
                 'ville_arrivee'      => $v->trajet?->ville_arrivee,
                 'gare_depart'        => $v->trajet?->gareDepart?->nom_gare,
@@ -137,7 +137,7 @@ class ClientBusController extends Controller
     {
         $this->reservations->expirerReservations();
 
-        $tickets = Ticket::with(['agence', 'planificationVoyage.trajet.gareDepart', 'planificationVoyage.trajet.gareArrivee'])
+        $tickets = Ticket::with(['agence.logoMedia', 'planificationVoyage.trajet.gareDepart', 'planificationVoyage.trajet.gareArrivee'])
             ->where('utilisateur_id', $request->user()->id)
             ->orderByDesc('date_reservation')
             ->limit(100)
@@ -152,6 +152,8 @@ class ClientBusController extends Controller
                     'reference_paiement'  => $t->reference_paiement,
                     'agence'              => $t->agence?->nom_agence,
                     'agence_logo'         => $t->agence?->logo_app,
+                    'agence_logo_url'     => $t->agence?->logoMedia?->url(),
+                    'agence_couleur'      => $t->agence?->couleur,
                     'nom'                 => $t->nom_passager,
                     'prenom'              => $t->prenom_passager,
                     'categorie'           => $t->categorie_passager ?? 'Adulte',
@@ -173,6 +175,8 @@ class ClientBusController extends Controller
                     'billet_test'         => PaiementService::estReferenceTest($t->reference_paiement),
                     // Le QR n'est fourni que pour un billet payé
                     'qr'                  => $paye ? 'MBL:' . $t->qr_code_token : null,
+                    // Contenu du QR : page du billet (logo et informations) lisible par tout téléphone
+                    'qr_url'              => $paye ? $t->urlPublique() : null,
                 ];
             });
 

@@ -127,8 +127,8 @@ class AgentPresenceController extends Controller
     {
         $agent = $this->agentAutorise();
         $code  = trim((string) $reference);
-        // Nouveau QR : « MBL:<jeton> » ; ancien QR / saisie : référence du billet
-        $jeton = str_starts_with($code, 'MBL:') ? substr($code, 4) : null;
+        // QR : « MBL:<jeton> » ou URL « …/billet/<jeton> » ; saisie : référence du billet
+        $jeton = Ticket::jetonDepuisCode($code);
 
         if (!$agent) {
             return response()->json([

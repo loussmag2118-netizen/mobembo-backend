@@ -55,6 +55,13 @@ use App\Http\Controllers\Auth\UnifiedLoginController;
 // ================================================================
 // La page d'accueil du site est le formulaire de connexion de l'administration
 // (au lieu de la page par défaut de Laravel).
+// Images publiques (logos et photos des agences)
+Route::get('/medias/{id}', [\App\Http\Controllers\MediaController::class, 'afficher'])->whereNumber('id')->name('medias.afficher');
+
+// Page publique d'un billet, ouverte en scannant son QR code
+Route::get('/billet/{jeton}', [\App\Http\Controllers\BilletPublicController::class, 'afficher'])
+    ->where('jeton', '[A-Za-z0-9]{64}')->middleware('throttle:60,1')->name('billet.public');
+
 Route::get('/', [UnifiedLoginController::class, 'showLoginForm'])
     ->name('home');
 
@@ -192,6 +199,13 @@ Route::middleware(['auth', 'agence.active'])
             Route::resource('statistiques', StatistiqueController::class);
             Route::patch('/agence/age-enfant', [PlanificationVoyageController::class, 'majAgeEnfant'])->name('agence.age_enfant');
             Route::patch('/agence/choix-siege', [PlanificationVoyageController::class, 'majChoixSiege'])->name('agence.choix_siege');
+
+            // Vitrine de l'agence (page d'accueil de l'agence dans l'application)
+            Route::get('/vitrine', [\App\Http\Controllers\Admin\VitrineController::class, 'edit'])->name('vitrine.edit');
+            Route::put('/vitrine', [\App\Http\Controllers\Admin\VitrineController::class, 'update'])->name('vitrine.update');
+            Route::post('/vitrine/logo', [\App\Http\Controllers\Admin\VitrineController::class, 'logo'])->name('vitrine.logo');
+            Route::post('/vitrine/photos', [\App\Http\Controllers\Admin\VitrineController::class, 'ajouterPhoto'])->name('vitrine.photos.store');
+            Route::delete('/vitrine/photos/{media}', [\App\Http\Controllers\Admin\VitrineController::class, 'supprimerPhoto'])->whereNumber('media')->name('vitrine.photos.destroy');
         });
 
         // --- Lecture : accessible aux agents (guichet / contrôle) et aux admins

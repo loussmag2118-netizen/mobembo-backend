@@ -42,7 +42,7 @@ class TwilioVerifyService
             $verification = $this->client->verify->v2
                 ->services($this->verifySid)
                 ->verifications
-                ->create($phoneNumber, 'sms');
+                ->create($phoneNumber, 'sms', $this->optionsSms());
 
             return [
                 'success' => true,
@@ -68,6 +68,28 @@ class TwilioVerifyService
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Personnalisation du SMS envoyé par Twilio Verify :
+     *  - en français, au nom de « Mobembo Line » :
+     *    « Votre code de vérification Mobembo Line est : 123456 » ;
+     *  - avec un modèle de message personnalisé (approuvé par Twilio,
+     *    TWILIO_VERIFY_TEMPLATE_SID) s'il est configuré.
+     */
+    public function optionsSms(): array
+    {
+        $options = [
+            'locale'             => config('services.twilio.verify_locale', 'fr'),
+            'customFriendlyName' => mb_substr((string) config('services.twilio.verify_nom', 'Mobembo Line'), 0, 30),
+        ];
+
+        $modele = config('services.twilio.verify_template_sid');
+        if (! empty($modele)) {
+            $options['templateSid'] = $modele;
+        }
+
+        return $options;
     }
 
     public function checkCode(string $phoneNumber, string $code): array

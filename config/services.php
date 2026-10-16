@@ -39,6 +39,9 @@ return [
         'verify_nom'          => env('TWILIO_VERIFY_NOM'),   // nom personnalisé (si le compte Twilio l'autorise), 30 caractères max
         'verify_locale'       => env('TWILIO_VERIFY_LOCALE', 'fr'),
         'verify_template_sid' => env('TWILIO_VERIFY_TEMPLATE_SID'),         // modèle personnalisé approuvé par Twilio (HJ…)
+        // Codes vers les numéros Airtel (05) : désactivés tant que l'appel vocal
+        // Twilio (payant) ou un fournisseur de SMS local n'est pas en place
+        'airtel_actif'        => (bool) env('TWILIO_AIRTEL_ACTIF', false),
     ],
 
 ];

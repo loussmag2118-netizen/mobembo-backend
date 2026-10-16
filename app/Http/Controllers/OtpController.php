@@ -39,6 +39,16 @@ class OtpController extends Controller
         return ! app()->environment('production');
     }
 
+    public const MESSAGE_AIRTEL = 'Les codes vers les numéros Airtel ne sont pas encore disponibles. Inscrivez-vous avec un numéro MTN (06).';
+
+    /** Numéro Airtel (05) alors que l'envoi de codes Airtel n'est pas ouvert. */
+    public static function airtelIndisponible(?string $telephone): bool
+    {
+        $chiffres = preg_replace('/^(\+?242)/', '', preg_replace('/\s+/', '', (string) $telephone));
+
+        return str_starts_with($chiffres, '05') && ! config('services.twilio.airtel_actif');
+    }
+
     /**
      * Envoie un code OTP par SMS via Twilio Verify.
      * ⭐ type_usage est désormais OPTIONNEL (défaut = INSCRIPTION).
@@ -56,6 +66,10 @@ class OtpController extends Controller
                 'message' => $validator->errors()->first(),
                 'errors'  => $validator->errors()
             ], 422);
+        }
+
+        if (self::airtelIndisponible($request->telephone)) {
+            return response()->json(['message' => self::MESSAGE_AIRTEL, 'code_erreur' => 'AIRTEL_INDISPONIBLE'], 422);
         }
 
         $canal         = $request->input('canal', 'sms');

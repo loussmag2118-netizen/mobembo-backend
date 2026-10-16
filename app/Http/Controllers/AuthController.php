@@ -48,6 +48,11 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // Pas de compte qu'on ne pourrait pas confirmer par code
+        if (OtpController::airtelIndisponible($request->telephone)) {
+            return response()->json(['message' => OtpController::MESSAGE_AIRTEL, 'code_erreur' => 'AIRTEL_INDISPONIBLE'], 422);
+        }
+
         // Numéro déjà pris par un compte confirmé (ou du personnel) : refusé.
         // Compte client jamais confirmé (code non saisi) : la nouvelle
         // inscription le remplace, le numéro n'est pas bloqué.

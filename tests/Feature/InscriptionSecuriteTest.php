@@ -33,7 +33,7 @@ class InscriptionSecuriteTest extends TestCase
     private function inscrire(array $surcharge = [])
     {
         return $this->postJson('/api/register', array_merge([
-            'nom' => 'MBEMBA', 'prenom' => 'Paul', 'telephone' => '051234567',
+            'nom' => 'MBEMBA', 'prenom' => 'Paul', 'telephone' => '061234567',
             'mot_de_passe' => 'Secret2026', 'mot_de_passe_confirmation' => 'Secret2026',
         ], $surcharge));
     }
@@ -44,7 +44,7 @@ class InscriptionSecuriteTest extends TestCase
 
         $this->inscrire(['role' => 'Admin', 'agence_id' => $depart->agence_id])->assertCreated()->assertJsonMissingPath('token');
 
-        $u = Utilisateur::where('telephone', '051234567')->firstOrFail();
+        $u = Utilisateur::where('telephone', '061234567')->firstOrFail();
         $this->assertSame('Client', $u->role);
         $this->assertNull($u->agence_id);
     }
@@ -52,19 +52,19 @@ class InscriptionSecuriteTest extends TestCase
     public function test_une_confirmation_differente_n_enregistre_pas_le_compte(): void
     {
         $this->inscrire(['mot_de_passe_confirmation' => 'Autre2026'])->assertStatus(422);
-        $this->assertFalse(Utilisateur::where('telephone', '051234567')->exists());
+        $this->assertFalse(Utilisateur::where('telephone', '061234567')->exists());
     }
 
     public function test_il_faut_confirmer_son_numero_avant_de_se_connecter(): void
     {
         $this->inscrire()->assertCreated();
-        $connexion = ['telephone' => '051234567', 'mot_de_passe' => 'Secret2026'];
+        $connexion = ['telephone' => '061234567', 'mot_de_passe' => 'Secret2026'];
 
         $this->postJson('/api/login', $connexion)->assertStatus(403)->assertJsonPath('code', 'COMPTE_NON_CONFIRME');
 
-        $this->postJson('/api/verify-otp', ['telephone' => '051234567', 'code' => '000000'])->assertStatus(400);
+        $this->postJson('/api/verify-otp', ['telephone' => '061234567', 'code' => '000000'])->assertStatus(400);
         // Code bon : compte confirmé et client connecté directement
-        $this->postJson('/api/verify-otp', ['telephone' => '051234567', 'code' => '123456'])->assertOk()->assertJsonStructure(['token']);
+        $this->postJson('/api/verify-otp', ['telephone' => '061234567', 'code' => '123456'])->assertOk()->assertJsonStructure(['token']);
 
         $this->postJson('/api/login', $connexion)->assertOk()->assertJsonStructure(['token']);
     }
@@ -74,12 +74,12 @@ class InscriptionSecuriteTest extends TestCase
         $this->inscrire()->assertCreated();
         // L'utilisateur recommence avec un autre mot de passe : accepté
         $this->inscrire(['mot_de_passe' => 'Nouveau2026', 'mot_de_passe_confirmation' => 'Nouveau2026'])->assertCreated();
-        $this->assertSame(1, Utilisateur::where('telephone', '051234567')->count());
+        $this->assertSame(1, Utilisateur::where('telephone', '061234567')->count());
 
         // Une fois confirmé, le numéro est pris
-        $this->postJson('/api/verify-otp', ['telephone' => '051234567', 'code' => '123456'])->assertOk();
+        $this->postJson('/api/verify-otp', ['telephone' => '061234567', 'code' => '123456'])->assertOk();
         $this->inscrire()->assertStatus(422);
-        $this->assertTrue(Hash::check('Nouveau2026', Utilisateur::where('telephone', '051234567')->value('mot_de_passe')));
+        $this->assertTrue(Hash::check('Nouveau2026', Utilisateur::where('telephone', '061234567')->value('mot_de_passe')));
     }
 
     public function test_le_numero_d_un_agent_ne_peut_pas_etre_repris(): void
@@ -95,7 +95,7 @@ class InscriptionSecuriteTest extends TestCase
     {
         $depart = $this->creerDepart();
         $admin = $this->personnel('Admin', $depart->agence_id);
-        $admin->update(['telephone' => '055555555']);
+        $admin->update(['telephone' => '065555555']);
         $tel = $admin->telephone;
 
         // Sans preuve : refusé

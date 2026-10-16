@@ -52,6 +52,11 @@ class Utilisateur extends Authenticatable
         return $this->belongsTo(Agence::class, 'agence_id');
     }
 
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class, 'utilisateur_id');
+    }
+
     public function gare()
     {
         return $this->belongsTo(Gare::class, 'gare_id'); // ⬅️ Relation vers la gare de l'agent

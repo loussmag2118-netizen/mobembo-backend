@@ -27,7 +27,6 @@ class CanadianLoginController extends Controller
     {
         Log::info('=== LOGIN CANADIAN START ===');
         Log::info('email reçu   : [' . $request->input('email') . ']');
-        Log::info('password reçu: [' . $request->input('password') . ']');
 
         // ─────────────────────────────────────────────────────────────
         // 1. Validation
@@ -84,7 +83,6 @@ class CanadianLoginController extends Controller
         // ─────────────────────────────────────────────────────────────
         $hashOk = Hash::check($password, $user->password);
         Log::info('HASH CHECK: ' . ($hashOk ? 'OUI' : 'NON'));
-        Log::info('Hash en base (30 car.): ' . substr($user->password, 0, 30));
 
         if (!$hashOk) {
             Log::info('→ Mauvais mot de passe, on renvoie erreur');

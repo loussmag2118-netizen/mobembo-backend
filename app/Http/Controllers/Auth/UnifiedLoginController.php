@@ -68,7 +68,9 @@ class UnifiedLoginController extends Controller
         // ============================================================
         // 2️⃣ ESSAI CANADIAN — email ou téléphone, mot de passe = "password"
         // ============================================================
-        $canadian = CanadianUser::where(function ($q) use ($identifiant, $telNormalise, $telAvecZero, $telAvecIndic) {
+        // Seuls les administrateurs : les clients de l'application Canadian
+        // partagent la table mais n'ont accès qu'à l'API mobile.
+        $canadian = CanadianUser::where('est_admin', true)->where(function ($q) use ($identifiant, $telNormalise, $telAvecZero, $telAvecIndic) {
                 $q->where('email', $identifiant)
                   ->orWhere('telephone', $identifiant)
                   ->orWhere('telephone', $telNormalise)

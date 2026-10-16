@@ -372,6 +372,36 @@
                             </div>
                         </div>
                         <div class="relative group">
+                            <a href="{{ route('superadmin.utilisateurs.index') }}"
+                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.utilisateurs.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.utilisateurs.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        <i class="fa-solid fa-users"></i>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Utilisateurs inscrits</span>
+                                </div>
+                            </a>
+                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                Utilisateurs inscrits
+                            </div>
+                        </div>
+                        <div class="relative group">
+                            <a href="{{ route('superadmin.aerien.index') }}"
+                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.aerien.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.aerien.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                        <i class="fa-solid fa-plane"></i>
+                                    </span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Partenaire aérien</span>
+                                </div>
+                            </a>
+                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                Partenaire aérien
+                            </div>
+                        </div>
+                        <div class="relative group">
                             <a href="{{ route('superadmin.villes.index') }}"
                                class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.villes.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
                                :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">

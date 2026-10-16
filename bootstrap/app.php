@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'agence.active' => \App\Http\Middleware\CheckAgenceActive::class,
             'role'          => \App\Http\Middleware\EnsureRole::class,
+            'canadian.admin' => \App\Http\Middleware\EnsureCanadianAdmin::class,
         ]);
 
         // ⭐ Redirection des invités (non connectés) → page /login unifiée

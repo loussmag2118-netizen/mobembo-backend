@@ -145,6 +145,20 @@ Route::middleware('auth:superadmin')
         Route::patch('/agences/{agence}/toggle-status', [SuperAdminAgenceController::class, 'toggleStatus'])
             ->name('agences.toggleStatus');
 
+        // Clients inscrits sur les applications (bus et aérien)
+        Route::get('/utilisateurs', [\App\Http\Controllers\SuperAdmin\UtilisateurController::class, 'index'])
+            ->name('utilisateurs.index');
+
+        // Partenaire aérien (Canadian Airways) et ses administrateurs
+        Route::get('/aerien', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'index'])
+            ->name('aerien.index');
+        Route::post('/aerien/admins', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'ajouterAdmin'])
+            ->name('aerien.admins.store');
+        Route::post('/aerien/admins/{compte}/mot-de-passe', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'reinitialiserAdmin'])
+            ->name('aerien.admins.reinitialiser');
+        Route::delete('/aerien/admins/{compte}', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'retirerAdmin'])
+            ->name('aerien.admins.retirer');
+
         // Référentiel des villes du transport terrestre (utilisé par les gares des agences)
         Route::patch('/villes/{ville}/toggle', [SuperAdminVilleController::class, 'toggle'])
             ->name('villes.toggle');
@@ -232,7 +246,7 @@ Route::middleware(['auth', 'agence.active'])
 // CANADIAN AIRWAYS (protégé par guard canadian)
 // ================================================================
 Route::prefix('canadian')
-    ->middleware(['auth:canadian'])
+    ->middleware(['auth:canadian', 'canadian.admin'])
     ->name('canadian.')
     ->group(function () {
 

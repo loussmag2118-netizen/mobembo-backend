@@ -28,6 +28,7 @@ class CanadianUser extends Authenticatable
 
     protected $casts = [
         'compte_confirme'   => 'boolean',
+        'est_admin'         => 'boolean',
         'email_verified_at' => 'datetime',
     ];
 

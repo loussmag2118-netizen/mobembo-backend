@@ -48,10 +48,12 @@ class ReservationService
         return (int) ($voyage->agence?->age_max_enfant ?? 12);
     }
 
-    /** Assurance payée pour un bébé voyageant sur les genoux d'un adulte (FCFA). */
-    public function assuranceBebe(): float
+    /** Assurance payée pour un bébé sur les genoux d'un adulte (FCFA), fixée par la compagnie. */
+    public function assuranceBebe(PlanificationVoyage $voyage): float
     {
-        return (float) config('paiement.assurance_bebe', 5000);
+        $voyage->loadMissing('agence');
+
+        return (float) ($voyage->agence?->assurance_bebe ?? config('paiement.assurance_bebe', 5000));
     }
 
     public function ageMaxBebe(): int
@@ -72,7 +74,9 @@ class ReservationService
         $ageMaxBebe = $this->ageMaxBebe();
         $ageMinEnfant = $ageMaxBebe + 1;
 
-        return array_map(function (array $p) use ($ageMax, $ageMaxBebe, $ageMinEnfant) {
+        $assurance = $this->assuranceBebe($voyage);
+
+        return array_map(function (array $p) use ($ageMax, $ageMaxBebe, $ageMinEnfant, $assurance) {
             $categorie = ($p['categorie'] ?? 'Adulte') === 'Enfant' ? 'Enfant' : 'Adulte';
             $age = isset($p['age']) && $p['age'] !== '' ? (int) $p['age'] : null;
 
@@ -83,7 +87,7 @@ class ReservationService
                 if ($age < $ageMinEnfant) {
                     throw new ReservationImpossibleException(
                         "Un enfant de {$ageMaxBebe} ans ou moins voyage sur les genoux d'un adulte : déclarez-le comme bébé (assurance de "
-                        . number_format($this->assuranceBebe(), 0, ',', ' ') . ' FCFA).'
+                        . number_format($assurance, 0, ',', ' ') . ' FCFA).'
                     );
                 }
                 if ($age > $ageMax) {
@@ -131,7 +135,7 @@ class ReservationService
     public function montantPassager(PlanificationVoyage $voyage, array $passager): float
     {
         return $this->prixPour($voyage, $passager['categorie'] ?? 'Adulte')
-            + (! empty($passager['bebe']) ? $this->assuranceBebe() : 0);
+            + (! empty($passager['bebe']) ? $this->assuranceBebe($voyage) : 0);
     }
 
     /** Montant total attendu pour ces passagers. */
@@ -264,7 +268,7 @@ class ReservationService
                     'bebe_nom'           => $passager['bebe']['nom'] ?? null,
                     'bebe_prenom'        => $passager['bebe']['prenom'] ?? null,
                     'bebe_age'           => $passager['bebe']['age'] ?? null,
-                    'assurance_bebe'     => $passager['bebe'] ? $this->assuranceBebe() : 0,
+                    'assurance_bebe'     => $passager['bebe'] ? $this->assuranceBebe($voyage) : 0,
 
                     'ville_depart'    => $gareDepart?->ville ?? $voyage->trajet?->ville_depart,
                     'gare_depart_id'  => $gareDepart?->id,
@@ -278,7 +282,7 @@ class ReservationService
 
                     'nombre_places_reservees' => 1,
                     'prix'                    => $prix,
-                    'montant_total'           => $prix + ($passager['bebe'] ? $this->assuranceBebe() : 0),
+                    'montant_total'           => $prix + ($passager['bebe'] ? $this->assuranceBebe($voyage) : 0),
 
                     'statut_paiement'     => $payeImmediatement ? 'Paye' : 'En_Attente',
                     'statut_embarquement' => 'En_Attente',

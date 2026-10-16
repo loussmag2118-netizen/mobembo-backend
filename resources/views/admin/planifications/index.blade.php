@@ -50,6 +50,28 @@
         @error('age_max_enfant')
             <p class="text-xs font-bold text-rose-600 -mt-4">{{ $message }}</p>
         @enderror
+        <form action="{{ route('admin.agence.assurance_bebe') }}" method="POST"
+              class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-2xl border border-slate-200/80 px-5 py-4">
+            @csrf
+            @method('PATCH')
+            <div class="flex items-center gap-3 flex-1">
+                <span class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center"><i class="fa-solid fa-baby"></i></span>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">Assurance bébé</p>
+                    <p class="text-xs text-slate-500 font-semibold">Payée pour chaque bébé de 0 à 3 ans voyageant sur les genoux d'un adulte (sans siège). À partir de 4 ans, l'enfant paie son billet.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="number" name="assurance_bebe" min="0" max="100000" step="100" required
+                       value="{{ old('assurance_bebe', auth()->user()->agence?->assurance_bebe ?? 5000) }}"
+                       class="w-28 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 text-center focus:ring-2 focus:ring-pink-500 focus:outline-none">
+                <span class="text-sm font-bold text-slate-600">FCFA</span>
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-pink-600 text-white text-sm font-bold hover:bg-pink-700">Enregistrer</button>
+            </div>
+        </form>
+        @error('assurance_bebe')
+            <p class="text-xs font-bold text-rose-600 -mt-4">{{ $message }}</p>
+        @enderror
         <form action="{{ route('admin.agence.choix_siege') }}" method="POST"
               class="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-2xl border border-slate-200/80 px-5 py-4">
             @csrf

@@ -213,6 +213,7 @@ Route::middleware(['auth', 'agence.active', 'espace:bus'])
             Route::resource('voyageurs', VoyageurController::class)->except(['index', 'show']);
             Route::resource('statistiques', StatistiqueController::class);
             Route::patch('/agence/age-enfant', [PlanificationVoyageController::class, 'majAgeEnfant'])->name('agence.age_enfant');
+            Route::patch('/agence/assurance-bebe', [PlanificationVoyageController::class, 'majAssuranceBebe'])->name('agence.assurance_bebe');
             Route::patch('/agence/choix-siege', [PlanificationVoyageController::class, 'majChoixSiege'])->name('agence.choix_siege');
 
             // Vitrine de l'agence (page d'accueil de l'agence dans l'application)

@@ -72,6 +72,24 @@ class BebeBilletTest extends TestCase
         app(ReservationService::class)->montantAttendu($depart, [['nom' => 'E', 'categorie' => 'Enfant', 'age' => 8, 'bebe' => ['nom' => 'B', 'age' => 1]]]);
     }
 
+    public function test_chaque_compagnie_fixe_son_assurance_depuis_son_administration(): void
+    {
+        $depart = $this->creerDepart();
+        $admin = \App\Models\Utilisateur::create([
+            'agence_id' => $depart->agence_id, 'nom' => 'ADMIN', 'prenom' => 'A', 'telephone' => '061239876',
+            'role' => 'Admin', 'mot_de_passe' => bcrypt('Secret2026'), 'statut' => 'actif', 'compte_confirme' => true,
+        ]);
+
+        $this->actingAs($admin)->patch('/admin/agence/assurance-bebe', ['assurance_bebe' => 3500])->assertSessionHasNoErrors();
+        $this->assertSame(3500, $depart->agence->fresh()->assurance_bebe);
+
+        $passagers = [['nom' => 'P', 'bebe' => ['nom' => 'B', 'age' => 1]]];
+        $this->assertSame(10500.0, app(ReservationService::class)->montantAttendu($depart->fresh(), $passagers));   // 7 000 + 3 500
+        $this->assertSame(3500, collect($this->getJson('/api/planifications')->json())->first()['assurance_bebe']);
+
+        $this->get('/admin/planifications')->assertOk()->assertSee('Assurance bébé');
+    }
+
     public function test_l_application_recoit_le_montant_de_l_assurance(): void
     {
         $this->creerDepart();

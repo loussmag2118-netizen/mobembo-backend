@@ -127,9 +127,13 @@ class AgenceController extends Controller
             'date_partenariat' => 'required|date',
             // Réglages propres au bus
             'age_max_enfant'   => [$agence->estAerien() ? 'nullable' : 'required', 'integer', 'min:1', 'max:17'],
+            'assurance_bebe'   => ['nullable', 'integer', 'min:0', 'max:100000'],
         ]);
+        if (! isset($donnees['assurance_bebe'])) {
+            unset($donnees['assurance_bebe']);
+        }
         if ($agence->estAerien()) {
-            unset($donnees['age_max_enfant']);
+            unset($donnees['age_max_enfant'], $donnees['assurance_bebe']);
         } else {
             $donnees['choix_siege'] = $request->boolean('choix_siege');
         }

@@ -14,9 +14,9 @@ class Agence extends Model
     // Type de partenaire : compagnie de bus ou compagnie aérienne
     public const BUS    = 'bus';
     public const AERIEN = 'aerien';
-    protected $fillable = ['nom_agence', 'type_transport', 'slogan', 'couleur', 'couleur_secondaire', 'logo_media_id', 'statut', 'age_max_enfant', 'choix_siege', 'date_partenariat', 'superadmin_id'];
+    protected $fillable = ['nom_agence', 'type_transport', 'slogan', 'couleur', 'couleur_secondaire', 'logo_media_id', 'statut', 'age_max_enfant', 'assurance_bebe', 'choix_siege', 'date_partenariat', 'superadmin_id'];
 
-    protected $casts = ['age_max_enfant' => 'integer', 'choix_siege' => 'boolean'];
+    protected $casts = ['age_max_enfant' => 'integer', 'assurance_bebe' => 'integer', 'choix_siege' => 'boolean'];
 
     protected $attributes = ['type_transport' => self::BUS];
 

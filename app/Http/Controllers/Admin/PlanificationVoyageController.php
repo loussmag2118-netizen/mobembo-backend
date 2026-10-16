@@ -92,7 +92,7 @@ class PlanificationVoyageController extends Controller
                 'prix_enfant'          => $p->prix_enfant !== null ? (float) $p->prix_enfant : null, // null = prix adulte
                 'age_max_enfant'       => (int) ($p->agence?->age_max_enfant ?? 12),
                 // Bébé de 0 à 3 ans sur les genoux d'un adulte : assurance seulement
-                'assurance_bebe'       => (int) config('paiement.assurance_bebe', 5000),
+                'assurance_bebe'       => (int) ($p->agence?->assurance_bebe ?? config('paiement.assurance_bebe', 5000)),
                 'age_max_bebe'         => (int) config('paiement.age_max_bebe', 3),
                 'choix_siege'          => (bool) $p->agence?->choix_siege,
                 'trajet' => $p->trajet ? [
@@ -463,6 +463,23 @@ class PlanificationVoyageController extends Controller
     /**
      * Âge maximum « enfant » de l'agence (prix enfant des départs).
      */
+    /** Montant de l'assurance d'un bébé (0 à 3 ans, sur les genoux d'un adulte). */
+    public function majAssuranceBebe(Request $request)
+    {
+        $request->validate(['assurance_bebe' => 'required|integer|min:0|max:100000'], [
+            'assurance_bebe.max' => 'Le montant de l\'assurance ne peut pas dépasser 100 000 FCFA.',
+        ]);
+
+        $agence = Auth::user()->agence;
+        abort_unless($agence, 403);
+
+        $avant = $agence->assurance_bebe;
+        $agence->update(['assurance_bebe' => (int) $request->assurance_bebe]);
+        \App\Support\Audit::log('agence.assurance_bebe', $agence, ['avant' => $avant, 'apres' => $agence->assurance_bebe]);
+
+        return back()->with('success', 'Assurance bébé : ' . number_format($agence->assurance_bebe, 0, ',', ' ') . ' FCFA par bébé.');
+    }
+
     public function majAgeEnfant(Request $request)
     {
         $request->validate(['age_max_enfant' => 'required|integer|min:1|max:17']);

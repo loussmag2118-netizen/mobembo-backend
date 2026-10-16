@@ -58,6 +58,14 @@
                 @endunless
             </div>
             @unless($agence->estAerien())
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Assurance bébé (0 à 3 ans, sans siège)</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" name="assurance_bebe" min="0" max="100000" step="100" required value="{{ old('assurance_bebe', $agence->assurance_bebe) }}"
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold">
+                    <span class="text-sm font-bold text-slate-500">FCFA</span>
+                </div>
+            </div>
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" name="choix_siege" value="1" @checked(old('choix_siege', $agence->choix_siege)) class="w-5 h-5 rounded accent-emerald-600">
                 <span class="text-sm font-bold text-slate-700">Les clients choisissent leur siège</span>

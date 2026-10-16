@@ -1,14 +1,14 @@
 @php
-    $isCanadian   = request()->is('canadian*');
+    $isCanadian   = request()->is('aerien*');   // espace d'une compagnie aérienne
     $isSuperAdmin = request()->is('superadmin*');
 
     $user = $isSuperAdmin
         ? Auth::guard('superadmin')->user()
-        : ($isCanadian ? Auth::guard('canadian')->user() : Auth::user());
+        : Auth::user();
 
     $agenceNom = $isSuperAdmin
         ? 'Super administration'
-        : ($user?->agence?->nom_agence ?? ($isCanadian ? 'Canadian Airways' : 'Mobembo Line'));
+        : ($user?->agence?->nom_agence ?? 'Mobembo Line');
     $userEmail = $user?->email ?? ($user?->telephone ? $user?->telephone : 'admin@mobemboline.com');
     $userNomComplet = trim(($user?->prenom ?? $user?->name ?? 'Admin') . ' ' . ($user?->nom ?? ''));
     if (empty($userNomComplet)) $userNomComplet = 'Admin';
@@ -16,8 +16,8 @@
     $userInitiales = strtoupper(substr($user?->prenom ?? $user?->name ?? 'A', 0, 1) . substr($user?->nom ?? '', 0, 1));
     if (empty(trim($userInitiales))) $userInitiales = 'MB';
 
-    // Identité visuelle de l'agence (couleurs et logo) : administration d'agence seulement
-    $agenceCourante = (! $isSuperAdmin && ! $isCanadian) ? $user?->agence : null;
+    // Identité visuelle du partenaire (couleurs et logo), bus comme aérien
+    $agenceCourante = ! $isSuperAdmin ? $user?->agence : null;
     $identite = $agenceCourante?->identite();
 
     // Libellé du rôle affiché dans la barre latérale
@@ -29,7 +29,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@hasSection('title')@yield('title') — @endif{{ $isCanadian ? 'Canadian Airways' : $agenceNom }} — Portail Administrateur</title>
+    <title>@hasSection('title')@yield('title') — @endif{{ $agenceNom }} — Portail Administrateur</title>
     
     {{-- Anti-FOUC Script pour le Thème Sombre / Clair Immédiat --}}
     <script>
@@ -364,7 +364,7 @@
                                     <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.agences.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
                                         <i class="fa-solid fa-building-shield"></i>
                                     </span>
-                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Agences partenaires</span>
+                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Partenaires (bus et aérien)</span>
                                 </div>
                             </a>
                             <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
@@ -384,21 +384,6 @@
                             </a>
                             <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
                                 Utilisateurs inscrits
-                            </div>
-                        </div>
-                        <div class="relative group">
-                            <a href="{{ route('superadmin.aerien.index') }}"
-                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ request()->routeIs('superadmin.aerien.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2.5'">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('superadmin.aerien.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
-                                        <i class="fa-solid fa-plane"></i>
-                                    </span>
-                                    <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">Partenaire aérien</span>
-                                </div>
-                            </a>
-                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
-                                Partenaire aérien
                             </div>
                         </div>
                         <div class="relative group">
@@ -434,66 +419,66 @@
                     </div>
                 </div>
             @elseif($isCanadian)
-                {{-- MENU AVIATION --}}
-                <div>
-                    <div x-show="!sidebarCollapsed" class="px-3 flex items-center justify-between mb-2.5">
-                        <span class="text-xs font-black uppercase tracking-wider text-slate-400">Aviation Civile</span>
-                        <span class="w-2 h-2 rounded-full bg-sky-500"></span>
-                    </div>
-                    <div x-show="sidebarCollapsed" class="w-8 h-0.5 bg-slate-200 dark:bg-slate-800 mx-auto my-3 rounded-full"></div>
-
-                    <div class="space-y-1.5">
-                        <!-- Tableau de bord Canadian -->
-                        <div class="relative group">
-                            <a href="{{ route('canadian.admin') }}" 
-                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 {{ request()->routeIs('canadian.admin') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5'">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('canadian.admin') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
-                                        <i class="fa-solid fa-gauge-high"></i>
-                                    </span>
-                                    <span x-show="!sidebarCollapsed" class="truncate font-bold">Tableau de bord</span>
-                                </div>
-                            </a>
-                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
-                                Tableau de bord
+                {{-- MENU COMPAGNIE AÉRIENNE --}}
+                @php
+                    $menuAerien = [
+                        'Pilotage' => [
+                            ['canadian.admin', 'canadian.admin', 'fa-gauge-high', 'Tableau de bord'],
+                            ['canadian.rapports.index', 'canadian.rapports.*', 'fa-chart-pie', 'Rapports'],
+                        ],
+                        'Exploitation' => [
+                            ['canadian.vols.index', 'canadian.vols.*', 'fa-plane-departure', 'Vols'],
+                            ['canadian.flotte.index', 'canadian.flotte.*', 'fa-plane', 'Flotte'],
+                            ['canadian.villes.index', 'canadian.villes.*', 'fa-plane-arrival', 'Aéroports'],
+                        ],
+                        'Ventes' => [
+                            ['canadian.reservations.index', 'canadian.reservations.*', 'fa-ticket', 'Réservations'],
+                            ['canadian.passagers.index', 'canadian.passagers.*', 'fa-users', 'Passagers'],
+                            ['canadian.paiements.index', 'canadian.paiements.*', 'fa-money-bill-wave', 'Paiements'],
+                        ],
+                        'Offre' => [
+                            ['canadian.classes.index', 'canadian.classes.*', 'fa-layer-group', 'Classes tarifaires'],
+                            ['canadian.extras.index', 'canadian.extras.*', 'fa-suitcase-rolling', 'Bagages et options'],
+                            ['canadian.promos.index', 'canadian.promos.*', 'fa-tags', 'Codes promo'],
+                        ],
+                        'Compagnie' => [
+                            ['canadian.notifications.index', 'canadian.notifications.*', 'fa-bell', 'Notifications clients'],
+                            ['canadian.parametres.index', 'canadian.parametres.*', 'fa-sliders', 'Paramètres'],
+                        ],
+                    ];
+                @endphp
+                <div class="space-y-5">
+                    @foreach($menuAerien as $section => $entrees)
+                        <div>
+                            <div x-show="!sidebarCollapsed" class="px-3 flex items-center justify-between mb-2">
+                                <span class="text-xs font-black uppercase tracking-wider text-slate-400">{{ $section }}</span>
+                                @if($loop->first)
+                                    <span class="text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-plane text-[9px]"></i> Aérien</span>
+                                @endif
+                            </div>
+                            <div x-show="sidebarCollapsed" class="w-8 h-0.5 bg-slate-200 dark:bg-slate-800 mx-auto my-3 rounded-full"></div>
+                            <div class="space-y-1">
+                                @foreach($entrees as [$routeMenu, $motif, $icone, $libelle])
+                                    @php $actif = request()->routeIs($motif); @endphp
+                                    <div class="relative group">
+                                        <a href="{{ route($routeMenu) }}"
+                                           class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 group-hover:translate-x-1 {{ $actif ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
+                                           :class="sidebarCollapsed ? 'justify-center p-2.5 !translate-x-0' : 'justify-between px-3.5 py-2'">
+                                            <div class="flex items-center gap-3">
+                                                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-[15px] transition-transform group-hover:scale-105 {{ $actif ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
+                                                    <i class="fa-solid {{ $icone }}"></i>
+                                                </span>
+                                                <span x-show="!sidebarCollapsed" class="truncate font-bold text-sm">{{ $libelle }}</span>
+                                            </div>
+                                        </a>
+                                        <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+                                            {{ $libelle }}
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
-
-                        <!-- Vols -->
-                        <div class="relative group">
-                            <a href="{{ route('canadian.vols.index') }}" 
-                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 {{ request()->routeIs('canadian.vols.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5'">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('canadian.vols.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
-                                        <i class="fa-solid fa-plane-departure"></i>
-                                    </span>
-                                    <span x-show="!sidebarCollapsed" class="truncate font-bold">Gestion des Vols</span>
-                                </div>
-                            </a>
-                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
-                                Gestion des Vols
-                            </div>
-                        </div>
-
-                        <!-- Réservations -->
-                        <div class="relative group">
-                            <a href="{{ route('canadian.reservations.index') }}" 
-                               class="flex items-center rounded-2xl text-sm font-bold transition-all duration-200 {{ request()->routeIs('canadian.reservations.*') ? 'sidebar-active-gradient text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5'">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-10 h-10 rounded-xl flex items-center justify-center text-base transition-transform group-hover:scale-105 {{ request()->routeIs('canadian.reservations.*') ? 'bg-white/15 text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' }}">
-                                        <i class="fa-solid fa-ticket"></i>
-                                    </span>
-                                    <span x-show="!sidebarCollapsed" class="truncate font-bold">Réservations</span>
-                                </div>
-                            </a>
-                            <div x-show="sidebarCollapsed" class="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
-                                Réservations
-                            </div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
             @else
                 {{-- MENU PRINCIPAL (TRANSPORT TERRESTRE) --}}

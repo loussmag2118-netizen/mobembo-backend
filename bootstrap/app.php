@@ -29,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'agence.active' => \App\Http\Middleware\CheckAgenceActive::class,
             'role'          => \App\Http\Middleware\EnsureRole::class,
-            'canadian.admin' => \App\Http\Middleware\EnsureCanadianAdmin::class,
+            'espace'        => \App\Http\Middleware\EspacePartenaire::class,
         ]);
 
         // ⭐ Redirection des invités (non connectés) → page /login unifiée
@@ -45,14 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('superadmin.agences.index');
             }
 
-            // 2. Canadian connecté ?
-            if (auth('canadian')->check()) {
-                return route('canadian.admin');
-            }
-
-            // 3. Admin agence / Agent connecté ?
+            // 2. Partenaire connecté (bus ou aérien) ?
             if (auth('web')->check()) {
-                return route('admin.dashboard');
+                return \App\Http\Middleware\EspacePartenaire::accueil(auth('web')->user());
             }
 
             // 4. Par défaut, rester sur la page de login

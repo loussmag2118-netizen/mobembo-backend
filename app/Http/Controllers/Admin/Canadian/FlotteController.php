@@ -2,106 +2,88 @@
 
 namespace App\Http\Controllers\Admin\Canadian;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Flotte;
+use App\Models\Vol;
+use App\Support\Audit;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
-class FlotteController extends Controller
+class FlotteController extends EspaceAerienController
 {
-    /**
-     * Liste des aéronefs.
-     */
+    public const STATUTS = ['Actif' => 'En service', 'Maintenance' => 'En maintenance', 'Inactif' => 'Hors service'];
+
     public function index()
     {
-        $flottes = Flotte::latest()->get();
+        $flottes = Flotte::deLaCompagnie($this->compagnieId())
+            ->withCount(['vols as vols_a_venir' => fn ($q) => $q->where('date_depart', '>', now())->where('statut', 'programme')])
+            ->orderBy('modele')
+            ->paginate(5)->withQueryString();
 
-        return view('admin.canadian.flotte.index', compact('flottes'));
+        $parStatut = Flotte::deLaCompagnie($this->compagnieId())->selectRaw('statut, COUNT(*) AS n')->groupBy('statut')->pluck('n', 'statut');
+        $sieges = (int) Flotte::deLaCompagnie($this->compagnieId())->where('statut', 'Actif')->sum('capacite_places');
+
+        return view('admin.canadian.flotte.index', compact('flottes', 'parStatut', 'sieges'));
     }
 
-    /**
-     * Formulaire de création.
-     */
     public function create()
     {
-        return view('admin.canadian.flotte.create');
+        return view('admin.canadian.flotte.create', ['flotte' => new Flotte(['statut' => 'Actif'])]);
     }
 
-    /**
-     * Enregistrer un aéronef.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'modele'          => 'nullable|string|max:100',
-            'capacite_places' => 'required|integer|min:1',
-            'annee'           => 'nullable|integer|min:1950|max:' . (date('Y') + 1),
-            'statut'          => 'required|in:Actif,Maintenance,Inactif',
+        $flotte = Flotte::create($this->valider($request) + [
+            'agence_id'    => $this->compagnieId(),
+            'nom_appareil' => $this->compagnie()->nom_agence,
         ]);
+        Audit::log('flotte.ajoutee', $flotte, ['modele' => $flotte->modele], $this->compagnieId());
 
-        // ⭐ Nom d'appareil forcé : jamais saisi par l'utilisateur
-        $validated['nom_appareil'] = 'Air Canadian';
-
-        Flotte::create($validated);
-
-        return redirect()
-            ->route('canadian.flotte.index')
-            ->with('success', 'Appareil ajouté à la flotte avec succès.');
+        return redirect()->route('canadian.flotte.index')->with('success', 'Avion ajouté à la flotte.');
     }
 
-    /**
-     * Détails d'un aéronef.
-     */
-    public function show($id)
-    {
-        $flotte = Flotte::findOrFail($id);
-
-        return view('admin.canadian.flotte.show', compact('flotte'));
-    }
-
-    /**
-     * Formulaire de modification.
-     */
     public function edit($id)
     {
-        $flotte = Flotte::findOrFail($id);
-
-        return view('admin.canadian.flotte.edit', compact('flotte'));
+        return view('admin.canadian.flotte.edit', ['flotte' => $this->appareil($id)]);
     }
 
-    /**
-     * Mettre à jour un aéronef.
-     */
     public function update(Request $request, $id)
     {
-        $flotte = Flotte::findOrFail($id);
+        $flotte = $this->appareil($id);
+        $flotte->update($this->valider($request, $flotte) + ['nom_appareil' => $this->compagnie()->nom_agence]);
 
-        $validated = $request->validate([
-            'modele'          => 'nullable|string|max:100',
-            'capacite_places' => 'required|integer|min:1',
-            'annee'           => 'nullable|integer|min:1950|max:' . (date('Y') + 1),
-            'statut'          => 'required|in:Actif,Maintenance,Inactif',
-        ]);
-
-        // ⭐ On garantit que le nom reste "Air Canadian"
-        $validated['nom_appareil'] = 'Air Canadian';
-
-        $flotte->update($validated);
-
-        return redirect()
-            ->route('canadian.flotte.index')
-            ->with('success', 'Appareil mis à jour avec succès.');
+        return redirect()->route('canadian.flotte.index')->with('success', 'Avion mis à jour.');
     }
 
-    /**
-     * Supprimer un aéronef.
-     */
     public function destroy($id)
     {
-        $flotte = Flotte::findOrFail($id);
+        $flotte = $this->appareil($id);
+        if (Vol::where('flotte_id', $flotte->id)->where('date_depart', '>', now())->where('statut', 'programme')->exists()) {
+            return back()->with('error', 'Cet avion est prévu sur des vols à venir : changez d\'abord l\'avion de ces vols, ou passez-le « Hors service ».');
+        }
         $flotte->delete();
 
-        return redirect()
-            ->route('canadian.flotte.index')
-            ->with('success', 'Appareil retiré avec succès.');
+        return redirect()->route('canadian.flotte.index')->with('success', 'Avion retiré de la flotte.');
+    }
+
+    private function appareil($id): Flotte
+    {
+        return Flotte::deLaCompagnie($this->compagnieId())->findOrFail($id);
+    }
+
+    private function valider(Request $request, ?Flotte $flotte = null): array
+    {
+        $request->merge(['immatriculation' => $request->filled('immatriculation') ? strtoupper(trim($request->immatriculation)) : null]);
+
+        return $request->validate([
+            'modele'          => 'required|string|max:100',
+            'immatriculation' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z0-9]{1,2}-?[A-Z0-9]{2,5}$/', Rule::unique('flottes', 'immatriculation')->ignore($flotte?->id)],
+            'capacite_places' => 'required|integer|min:1|max:900',
+            'annee'           => 'nullable|integer|min:1950|max:' . (date('Y') + 1),
+            'statut'          => ['required', Rule::in(array_keys(self::STATUTS))],
+        ], [
+            'modele.required'        => 'Indiquez le modèle (ex. Boeing 737-800).',
+            'immatriculation.regex'  => 'Immatriculation attendue au format TN-AJB (préfixe pays, tiret, lettres).',
+            'immatriculation.unique' => 'Cette immatriculation est déjà enregistrée.',
+        ]);
     }
 }

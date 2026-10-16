@@ -129,7 +129,7 @@ class PaiementService
         return 'MOBEMBO-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
     }
 
-    public function demanderMtn(string $jeton, string $reference, string $externalId, float $montant, string $telephone): Response
+    public function demanderMtn(string $jeton, string $reference, string $externalId, float $montant, string $telephone, string $objet = 'billet de bus'): Response
     {
         $entetes = [
             'Authorization'             => 'Bearer ' . $jeton,
@@ -149,7 +149,7 @@ class PaiementService
             'payer'        => ['partyIdType' => 'MSISDN', 'partyId' => self::msisdnCongo($telephone)],
             // Nom de la plateforme sur chaque transaction (suivi et rapprochement)
             'payerMessage' => 'Mobembo Line',
-            'payeeNote'    => 'Mobembo Line - billet de bus ' . $externalId,
+            'payeeNote'    => 'Mobembo Line - ' . $objet . ' ' . $externalId,
         ]);
     }
 

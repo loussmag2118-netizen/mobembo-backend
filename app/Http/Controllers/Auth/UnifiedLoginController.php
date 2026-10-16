@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\CanadianUser;
 use App\Models\SuperAdmin;
 use App\Models\Utilisateur;
+use App\Http\Middleware\EspacePartenaire;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -66,29 +66,7 @@ class UnifiedLoginController extends Controller
         }
 
         // ============================================================
-        // 2️⃣ ESSAI CANADIAN — email ou téléphone, mot de passe = "password"
-        // ============================================================
-        // Seuls les administrateurs : les clients de l'application Canadian
-        // partagent la table mais n'ont accès qu'à l'API mobile.
-        $canadian = CanadianUser::where('est_admin', true)->where(function ($q) use ($identifiant, $telNormalise, $telAvecZero, $telAvecIndic) {
-                $q->where('email', $identifiant)
-                  ->orWhere('telephone', $identifiant)
-                  ->orWhere('telephone', $telNormalise)
-                  ->orWhere('telephone', $telAvecZero)
-                  ->orWhere('telephone', $telAvecIndic);
-            })
-            ->first();
-
-        if ($canadian && Hash::check($password, $canadian->password)) {
-            Auth::guard('canadian')->login($canadian, $request->boolean('remember'));
-            $request->session()->regenerate();
-            Audit::log('connexion.reussie', $canadian, ['espace' => 'canadian']);
-
-            return redirect()->intended(route('canadian.admin'));
-        }
-
-        // ============================================================
-        // 3️⃣ ESSAI UTILISATEUR — ⚠️ mot de passe = "mot_de_passe"
+        // 2️⃣ ESSAI PARTENAIRE (bus ou aérien) — ⚠️ mot de passe = "mot_de_passe"
         // ============================================================
         $user = Utilisateur::where(function ($q) use ($identifiant, $telNormalise, $telAvecZero, $telAvecIndic) {
                 $q->where('telephone', $telNormalise)
@@ -122,11 +100,19 @@ class UnifiedLoginController extends Controller
                 ]);
             }
 
+            // Compagnie aérienne : pas d'espace agent, administrateurs seulement
+            if ($user->agence?->estAerien() && $user->role !== 'Admin') {
+                throw ValidationException::withMessages([
+                    'identifiant' => 'Accès refusé. Vous n\'avez pas les droits d\'administration.',
+                ]);
+            }
+
             Auth::guard('web')->login($user, $request->boolean('remember'));
             $request->session()->regenerate();
-            Audit::log('connexion.reussie', $user, ['espace' => 'admin', 'role' => $user->role]);
+            $espace = $user->agence?->estAerien() ? 'aerien' : 'admin';
+            Audit::log('connexion.reussie', $user, ['espace' => $espace, 'role' => $user->role]);
 
-            return redirect()->intended('/admin/dashboard');
+            return redirect()->intended(EspacePartenaire::accueil($user));
         }
 
         // ============================================================

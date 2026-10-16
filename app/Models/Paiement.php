@@ -2,33 +2,35 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AppartientACompagnie;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Paiement extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, AppartientACompagnie;
 
     protected $table = 'paiements';
 
     protected $fillable = [
+        'agence_id',
         'reservation_id',
-        'user_id',
-        'reference',
+        'reference_transaction',
+        'nom_client',
+        'telephone_client',
+        'methode',
         'montant',
-        'devise',
-        'mode_paiement',
-        'telephone_paiement',
         'statut',
-        'date_paiement',
-        'details',
     ];
 
     protected $casts = [
-        'montant'       => 'decimal:2',
-        'date_paiement' => 'datetime',
-        'details'       => 'array',
+        'montant' => 'decimal:2',
     ];
+
+    public function reservation()
+    {
+        return $this->belongsTo(Reservation::class, 'reservation_id');
+    }
 
     // -----------------------------------------------------
     // Helpers

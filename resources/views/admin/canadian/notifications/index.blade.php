@@ -1,166 +1,81 @@
 @extends('layouts.admin')
 
+@section('title', 'Notifications clients')
+@section('header_icon', 'fa-bell')
+@section('header_title', 'Notifications clients')
+@section('header_subtitle', 'Messages affichés dans l\'application de vos clients (retard, porte d\'embarquement, offre…)')
+
 @section('content')
-
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">
-        <i class="fa-solid fa-bell text-sky-600 mr-2"></i>
-        Notifications & SMS
-    </h1>
-</div>
-
-@if(session('success'))
-    <div class="mb-5 p-4 rounded-lg bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm">
-        <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-    </div>
-@endif
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- ENVOI DE NOTIFICATION                                  -->
-<!-- ═══════════════════════════════════════════════════════ -->
-<div class="bg-white shadow ring-1 ring-slate-200 rounded-xl p-6 mb-6">
-    <h2 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">
-        <i class="fa-solid fa-paper-plane text-sky-600 mr-2"></i>
-        Envoyer une notification
-    </h2>
-
-    <form action="{{ route('canadian.notifications.store') }}" method="POST" class="space-y-4">
+@php
+    $champ = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#124231] focus:outline-none';
+    $etiquette = 'block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5';
+    $types = ['info' => ['Information', 'bg-sky-50 text-sky-700'], 'warning' => ['Alerte', 'bg-amber-50 text-amber-700'], 'success' => ['Confirmation', 'bg-emerald-50 text-emerald-700'], 'promo' => ['Offre', 'bg-violet-50 text-violet-700']];
+@endphp
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+    <form method="POST" action="{{ route('canadian.notifications.store') }}" class="xl:col-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4 self-start" x-data="{ cible: @js(old('cible', 'tous')) }">
         @csrf
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Client -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-1">
-                    Destinataire
-                </label>
-                <select name="client_id" required
-                        class="w-full rounded-lg border-slate-300 py-2.5 px-3 text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-sky-600 sm:text-sm">
-                    <option value="">-- Tous les clients --</option>
-                    @foreach($clients as $client)
-                        <option value="{{ $client->id }}" {{ old('client_id') == $client->id ? 'selected' : '' }}>
-                            {{ $client->nom }} {{ $client->prenom ?? '' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- Type -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-1">
-                    Type de notification
-                </label>
-                <select name="type" required
-                        class="w-full rounded-lg border-slate-300 py-2.5 px-3 text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-sky-600 sm:text-sm">
-                    <option value="info"    {{ old('type') == 'info'    ? 'selected' : '' }}>ℹ️ Information</option>
-                    <option value="success" {{ old('type') == 'success' ? 'selected' : '' }}>✅ Succès</option>
-                    <option value="warning" {{ old('type') == 'warning' ? 'selected' : '' }}>⚠️ Avertissement</option>
-                    <option value="promo"   {{ old('type') == 'promo'   ? 'selected' : '' }}>🎁 Promotion</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Titre -->
+        <h2 class="text-base font-black text-slate-900">Nouveau message</h2>
+        @include('admin.canadian.partials.erreurs')
         <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">
-                Titre
-            </label>
-            <input type="text" name="titre" value="{{ old('titre') }}"
-                   placeholder="Ex: Promo spéciale"
-                   required
-                   class="w-full rounded-lg border-slate-300 py-2.5 px-3 text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-sky-600 sm:text-sm">
+            <label class="{{ $etiquette }}">Destinataires *</label>
+            <select name="cible" x-model="cible" class="{{ $champ }}">
+                <option value="tous">Tous mes clients ({{ $clients->count() }})</option>
+                <option value="vol">Les passagers d'un vol</option>
+                <option value="client">Un client</option>
+            </select>
         </div>
-
-        <!-- Message -->
+        <div x-show="cible === 'vol'">
+            <label class="{{ $etiquette }}">Numéro du vol</label>
+            <input name="numero_vol" value="{{ old('numero_vol') }}" placeholder="Ex : CA101" class="{{ $champ }} font-mono uppercase">
+        </div>
+        <div x-show="cible === 'client'">
+            <label class="{{ $etiquette }}">Client</label>
+            <select name="client_id" class="{{ $champ }}">
+                <option value="">Choisir…</option>
+                @foreach($clients as $c)
+                    <option value="{{ $c->id }}" @selected((int) old('client_id') === $c->id)>{{ trim(($c->prenom ?? '') . ' ' . ($c->nom ?? '')) ?: $c->name }} — {{ $c->telephone }}</option>
+                @endforeach
+            </select>
+        </div>
         <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">
-                Message
-            </label>
-            <textarea name="message" rows="3"
-                      placeholder="Écrivez le contenu de la notification..."
-                      required
-                      class="w-full rounded-lg border-slate-300 py-2.5 px-3 text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-sky-600 sm:text-sm">{{ old('message') }}</textarea>
+            <label class="{{ $etiquette }}">Type *</label>
+            <select name="type" class="{{ $champ }}">
+                @foreach($types as $cle => [$libelle])
+                    <option value="{{ $cle }}" @selected(old('type', 'info') === $cle)>{{ $libelle }}</option>
+                @endforeach
+            </select>
         </div>
-
-        <div class="flex justify-end">
-            <button type="submit"
-                    class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium">
-                <i class="fa-solid fa-paper-plane mr-2"></i> Envoyer
-            </button>
+        <div>
+            <label class="{{ $etiquette }}">Titre *</label>
+            <input name="titre" required maxlength="120" value="{{ old('titre') }}" placeholder="Ex : Changement de porte" class="{{ $champ }}">
         </div>
+        <div>
+            <label class="{{ $etiquette }}">Message *</label>
+            <textarea name="message" required maxlength="1000" rows="4" class="{{ $champ }}">{{ old('message') }}</textarea>
+        </div>
+        <button class="w-full py-3 rounded-xl bg-[#124231] hover:bg-[#0c2f23] text-white font-bold text-sm"><i class="fa-solid fa-paper-plane mr-1"></i> Envoyer</button>
     </form>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- HISTORIQUE                                             -->
-<!-- ═══════════════════════════════════════════════════════ -->
-<div class="bg-white shadow ring-1 ring-slate-200 rounded-xl overflow-hidden">
-    <div class="p-6 pb-4 border-b border-slate-100">
-        <h2 class="text-lg font-bold text-slate-800">
-            <i class="fa-solid fa-clock-rotate-left text-sky-600 mr-2"></i>
-            Historique récent ({{ $historique->count() }})
-        </h2>
-    </div>
-
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50 border-b border-slate-200">
-                <tr>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Titre</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Message</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Type</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500">Date</th>
-                    <th class="p-4 text-xs font-bold uppercase text-slate-500 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-                @forelse($historique as $notif)
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="p-4 text-sm font-semibold text-slate-800">
-                            {{ $notif->titre ?? '—' }}
-                        </td>
-                        <td class="p-4 text-sm text-slate-600">
-                            {{ Str::limit($notif->message ?? '', 80) }}
-                        </td>
-                        <td class="p-4 text-sm">
-                            @php
-                                $badges = [
-                                    'info'    => ['bg-blue-50 text-blue-700',     'ℹ️ Info'],
-                                    'success' => ['bg-emerald-50 text-emerald-700','✅ Succès'],
-                                    'warning' => ['bg-amber-50 text-amber-700',   '⚠️ Alerte'],
-                                    'promo'   => ['bg-purple-50 text-purple-700', '🎁 Promo'],
-                                ];
-                                [$class, $label] = $badges[$notif->type ?? 'info'] ?? ['bg-slate-100 text-slate-700', '•'];
-                            @endphp
-                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $class }}">
-                                {{ $label }}
-                            </span>
-                        </td>
-                        <td class="p-4 text-sm text-slate-500">
-                            {{ $notif->created_at ? $notif->created_at->format('d/m/Y H:i') : '—' }}
-                        </td>
-                        <td class="p-4 text-right">
-                            <form action="{{ route('canadian.notifications.destroy', $notif->id) }}"
-                                  method="POST"
-                                  onsubmit="return confirm('Supprimer cette notification ?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900 text-sm font-medium">
-                                    <i class="fa-solid fa-trash-can mr-1"></i> Supprimer
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" class="p-12 text-center text-slate-400">
-                            <i class="fa-solid fa-bell-slash text-4xl mb-3 text-slate-300"></i>
-                            <p class="text-base">Aucune notification envoyée pour le moment.</p>
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="xl:col-span-3 bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden self-start">
+        <div class="p-5 sm:px-6 border-b border-slate-100"><h2 class="text-base font-black text-slate-900">Messages envoyés ({{ $historique->total() }})</h2></div>
+        @forelse($historique as $n)
+            <div class="px-6 py-4 border-b border-slate-100 last:border-0 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold {{ $types[$n->type][1] ?? 'bg-slate-100 text-slate-600' }}">{{ $types[$n->type][0] ?? $n->type }}</span>
+                        <p class="font-bold text-slate-900">{{ $n->titre }}</p>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-1">{{ $n->message }}</p>
+                    <p class="text-xs text-slate-400 mt-1">À {{ $n->canadianUser ? (trim(($n->canadianUser->prenom ?? '') . ' ' . ($n->canadianUser->nom ?? '')) ?: $n->canadianUser->name) : '—' }} · {{ $n->created_at?->format('d/m/Y H:i') }} · {{ $n->lu ? 'lu' : 'non lu' }}</p>
+                </div>
+                <form method="POST" action="{{ route('canadian.notifications.destroy', $n->id) }}" onsubmit="return confirm('Supprimer ce message ?')">@csrf @method('DELETE')
+                    <button class="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-trash text-xs"></i></button>
+                </form>
+            </div>
+        @empty
+            @include('admin.canadian.partials.vide', ['icone' => 'fa-bell-slash', 'titre' => 'Aucun message', 'texte' => 'Les messages envoyés à vos clients apparaîtront ici.'])
+        @endforelse
+        @if($historique->hasPages())<div class="px-6 py-4 border-t border-slate-100">{{ $historique->links() }}</div>@endif
     </div>
 </div>
-
 @endsection

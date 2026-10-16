@@ -143,7 +143,7 @@ Route::middleware('auth:canadian-api')->prefix('canadian')->group(function () {
     Route::post('/reservations',               [CanadianClientController::class, 'creerReservation']);
     Route::get('/reservations/{id}',           [CanadianClientController::class, 'showReservation']);
     Route::post('/reservations/{id}/annuler',   [CanadianClientController::class, 'annulerReservation']);
-    Route::get('/reservations/{id}/billet',     [CanadianClientController::class, 'billetPdf']);
+    Route::get('/reservations/{id}/billet',     [CanadianClientController::class, 'billet']);
 
     // ────────────────────────────────────────────────────────
     // Extras disponibles
@@ -153,7 +153,8 @@ Route::middleware('auth:canadian-api')->prefix('canadian')->group(function () {
     // ────────────────────────────────────────────────────────
     // Paiements
     // ────────────────────────────────────────────────────────
-    Route::post('/paiements/initier', [CanadianClientController::class, 'initierPaiement']);
+    Route::post('/paiements/initier', [\App\Http\Controllers\Api\PaiementVolController::class, 'initier'])->middleware('throttle:paiement');
+    Route::get('/paiements/{reference}/statut', [\App\Http\Controllers\Api\PaiementVolController::class, 'statut']);
 
     // ────────────────────────────────────────────────────────
     // Notifications

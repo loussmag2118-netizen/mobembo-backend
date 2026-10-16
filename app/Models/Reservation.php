@@ -2,20 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AppartientACompagnie;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Reservation extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, AppartientACompagnie;
 
     protected $table = 'reservations';
 
     protected $fillable = [
+        'agence_id',
         'reference',
         'code_pnr',
-        'utilisateur_id',
+        'user_id',
         'canadian_user_id',
         'vol_id',
         'vol_retour_id',
@@ -31,13 +33,10 @@ class Reservation extends Model
         'prix_extras',
         'montant_total',
         'statut',
+        'expire_le',
         'date_paiement',
         'methode_paiement',
         'reference_paiement',
-        'code_reservation',
-        'mode_paiement',
-        'qr_code',
-        'billet_pdf_url',
     ];
 
     protected $casts = [
@@ -45,13 +44,13 @@ class Reservation extends Model
         'prix_billet'      => 'decimal:2',
         'prix_extras'      => 'decimal:2',
         'nombre_places'    => 'integer',
-        'utilisateur_id'   => 'integer',
         'canadian_user_id' => 'integer',
         'vol_id'           => 'integer',
         'vol_retour_id'    => 'integer',
         'gare_depart_id'   => 'integer',
         'gare_arrivee_id'  => 'integer',
         'date_paiement'    => 'datetime',
+        'expire_le'        => 'datetime',
     ];
 
     // ─────────────────────────────────────────────
@@ -65,11 +64,6 @@ class Reservation extends Model
     public function volRetour()
     {
         return $this->belongsTo(Vol::class, 'vol_retour_id');
-    }
-
-    public function utilisateur()
-    {
-        return $this->belongsTo(Utilisateur::class, 'utilisateur_id');
     }
 
     public function canadianUser()
@@ -108,9 +102,22 @@ class Reservation extends Model
         return $this->hasMany(ReservationExtra::class, 'reservation_id');
     }
 
+    public function paiement()
+    {
+        return $this->hasOne(Paiement::class, 'reservation_id')->latestOfMany();
+    }
+
     // ─────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────
+
+    /** Statuts qui occupent des places sur le vol */
+    public const STATUTS_ACTIFS = ['En_Attente', 'Paye', 'Confirmee'];
+
+    public function occupeDesPlaces(): bool
+    {
+        return in_array($this->statut, self::STATUTS_ACTIFS, true);
+    }
     public function recalculerTotal(): void
     {
         $this->prix_extras   = $this->reservationExtras()->sum('prix_total');

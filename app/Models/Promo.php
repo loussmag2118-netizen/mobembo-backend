@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AppartientACompagnie;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -9,7 +10,7 @@ use Carbon\Carbon;
 
 class Promo extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, AppartientACompagnie;
 
     protected $table = 'promos';
 
@@ -17,6 +18,7 @@ class Promo extends Model
      * ⭐ Colonnes alignées sur la structure réelle de la table.
      */
     protected $fillable = [
+        'agence_id',
         'code',
         'valeur',
         'type',              // ⚠️ dans ta base c'est 'type' (pas 'type_reduction')
@@ -24,7 +26,6 @@ class Promo extends Model
         'date_fin',
         'utilisation_max',   // ⚠️ dans ta base c'est 'utilisation_max'
         'utilisations_count',// ⚠️ présente en base
-        'utilisations',      // ⭐ compteur principal (utilisé par Promo::sum)
         'actif',
     ];
 
@@ -34,7 +35,6 @@ class Promo extends Model
         'date_fin'           => 'date',
         'utilisation_max'    => 'integer',
         'utilisations_count' => 'integer',
-        'utilisations'       => 'integer',
         'actif'              => 'boolean',
         'deleted_at'         => 'datetime',
     ];
@@ -79,7 +79,7 @@ class Promo extends Model
             ->where('date_fin',   '>=', now()->format('Y-m-d'))
             ->where(function ($q) {
                 $q->whereNull('utilisation_max')
-                  ->orWhereColumn('utilisations', '<', 'utilisation_max');
+                  ->orWhereColumn('utilisations_count', '<', 'utilisation_max');
             });
     }
 
@@ -110,7 +110,7 @@ class Promo extends Model
     public function getEstEpuiseeAttribute(): bool
     {
         if (is_null($this->utilisation_max)) return false;
-        return $this->utilisations >= $this->utilisation_max;
+        return $this->utilisations_count >= $this->utilisation_max;
     }
 
     /**
@@ -119,7 +119,7 @@ class Promo extends Model
     public function getUtilisationsRestantesAttribute(): ?int
     {
         if (is_null($this->utilisation_max)) return null;
-        return max(0, $this->utilisation_max - $this->utilisations);
+        return max(0, $this->utilisation_max - $this->utilisations_count);
     }
 
     /**
@@ -176,8 +176,7 @@ class Promo extends Model
      */
     public function incrementerUtilisation(): void
     {
-        $this->increment('utilisations');
-        $this->increment('utilisations_count'); // au cas où le champ existe encore
+        $this->increment('utilisations_count');
     }
 
     // ══════════════════════════════════════════════════════════════

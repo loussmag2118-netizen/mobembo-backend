@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AppartientACompagnie;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -9,11 +10,12 @@ use Carbon\Carbon;
 
 class Vol extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, AppartientACompagnie;
 
     protected $table = 'vols';
 
     protected $fillable = [
+        'agence_id',
         'numero_vol',
         'compagnie',
         'avion',                  // ⭐ AJOUTÉ
@@ -27,6 +29,8 @@ class Vol extends Model
         'date_arrivee',
         'prix',
         'places_disponibles',
+        'places_totales',
+        'flotte_id',
         'statut',
         'type_vol',
         'duree_minutes',
@@ -39,10 +43,16 @@ class Vol extends Model
         'date_arrivee'       => 'datetime',
         'prix'               => 'decimal:2',
         'places_disponibles' => 'integer',
+        'places_totales'     => 'integer',
         'duree_minutes'      => 'integer',
         'inclusions'         => 'array',
         'escales'            => 'array',
     ];
+
+    public function appareil()
+    {
+        return $this->belongsTo(Flotte::class, 'flotte_id');
+    }
 
     public function reservations()
     {
@@ -82,6 +92,14 @@ class Vol extends Model
     public function getEstDirectAttribute(): bool
     {
         return ($this->type_vol ?? 'direct') === 'direct';
+    }
+
+    /** Vols proposés aux clients : programmés, à venir, compagnie aérienne active. */
+    public function scopeEnVente($query)
+    {
+        return $query->where('statut', 'programme')
+            ->where('date_depart', '>', now())
+            ->whereHas('partenaire', fn ($a) => $a->where('type_transport', Agence::AERIEN)->where('statut', 'Actif'));
     }
 
     public function scopeDisponibles($query)

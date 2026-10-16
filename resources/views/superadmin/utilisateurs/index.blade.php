@@ -55,7 +55,7 @@
                     <span>{{ $estBus ? 'Clients du transport par bus' : 'Clients du transport aérien' }} ({{ $utilisateurs->total() }})</span>
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
-                    {{ $estBus ? 'Un même compte achète chez toutes les compagnies de bus.' : 'Comptes de l\'application Canadian Airways (hors administrateurs).' }}
+                    {{ $estBus ? 'Un même compte achète chez toutes les compagnies de bus.' : 'Un même compte réserve chez toutes les compagnies aériennes.' }}
                     Un compte « non confirmé » n'a pas encore saisi le code reçu.
                 </p>
             </div>

@@ -35,6 +35,25 @@ class TableauDeBordController extends Controller
             ->orderBy('nom_agence')
             ->get()
             ->map(function (Agence $a) {
+                // Compagnie aérienne : vols, réservations payées et chiffre d'affaires
+                if ($a->estAerien()) {
+                    $payees = DB::table('reservations')->where('agence_id', $a->id)
+                        ->whereIn('statut', ['Paye', 'Confirmee'])
+                        ->where(fn ($q) => $q->whereNull('reference_paiement')
+                            ->orWhere(fn ($q) => $q->where('reference_paiement', 'not like', 'SIM-%')
+                                                   ->where('reference_paiement', 'not like', 'AIRTEL-SIM-%')));
+
+                    return (object) [
+                        'agence'          => $a,
+                        'agents'          => 0,
+                        'bus'             => 0,
+                        'departs_a_venir' => DB::table('vols')->where('agence_id', $a->id)->whereNull('deleted_at')
+                            ->where('statut', 'programme')->where('date_depart', '>', now())->count(),
+                        'billets'         => (int) (clone $payees)->sum('nombre_places'),
+                        'chiffre'         => (float) (clone $payees)->sum('montant_total'),
+                    ];
+                }
+
                 $ventes = $this->billetsVendus()->where('agence_id', $a->id);
 
                 return (object) [

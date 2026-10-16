@@ -1,172 +1,59 @@
 @extends('layouts.admin')
 
+@section('title', 'Flotte')
+@section('header_icon', 'fa-plane')
+@section('header_title', 'Flotte')
+@section('header_subtitle', 'Vos avions : leur capacité limite les places mises en vente sur chaque vol')
+
 @section('content')
+@php $styles = ['Actif' => 'bg-emerald-50 text-emerald-700', 'Maintenance' => 'bg-amber-50 text-amber-700', 'Inactif' => 'bg-slate-100 text-slate-600']; @endphp
 <div class="space-y-6">
-
-    {{-- En-tête --}}
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-black text-slate-900">Flotte Air Canadian</h1>
-            <p class="text-sm text-slate-500 mt-1">
-                Gérez les aéronefs de la compagnie
-            </p>
-        </div>
-        <a href="{{ route('canadian.flotte.create') }}"
-           class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-[#C62828] to-[#8E0000] hover:from-[#E53935] hover:to-[#C62828] text-white font-semibold rounded-xl shadow-lg shadow-red-500/20 transition">
-            <i class="fa-solid fa-plus mr-2"></i> Ajouter un aéronef
-        </a>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @include('admin.canadian.partials.stat', ['titre' => 'Avions', 'valeur' => $parStatut->sum(), 'icone' => 'fa-plane', 'teinte' => 'slate'])
+        @include('admin.canadian.partials.stat', ['titre' => 'En service', 'valeur' => $parStatut['Actif'] ?? 0, 'icone' => 'fa-circle-check', 'teinte' => 'emerald'])
+        @include('admin.canadian.partials.stat', ['titre' => 'En maintenance', 'valeur' => $parStatut['Maintenance'] ?? 0, 'icone' => 'fa-screwdriver-wrench', 'teinte' => 'amber'])
+        @include('admin.canadian.partials.stat', ['titre' => 'Sièges en service', 'valeur' => number_format($sieges, 0, ',', ' '), 'icone' => 'fa-chair', 'teinte' => 'sky'])
     </div>
 
-    {{-- Messages --}}
-    @if(session('success'))
-        <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl flex items-center gap-3">
-            <i class="fa-solid fa-check-circle"></i>
-            {{ session('success') }}
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between gap-3">
+            <h2 class="text-base font-black text-slate-900">Avions ({{ $flottes->total() }})</h2>
+            <a href="{{ route('canadian.flotte.create') }}" class="inline-flex items-center gap-2 bg-[#124231] hover:bg-[#0c2f23] text-white text-sm font-bold py-2.5 px-5 rounded-xl shadow-sm"><i class="fa-solid fa-plus"></i> Ajouter un avion</a>
         </div>
-    @endif
-
-    @if(session('error'))
-        <div class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-3">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            {{ session('error') }}
-        </div>
-    @endif
-
-    {{-- Statistiques --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-sky-100 text-sky-600 rounded-lg">
-                    <i class="fa-solid fa-plane"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total</p>
+        @if($flottes->isEmpty())
+            @include('admin.canadian.partials.vide', ['icone' => 'fa-plane', 'titre' => 'Aucun avion', 'texte' => 'Ajoutez vos avions pour les associer à vos vols.', 'lien' => ['Ajouter un avion', route('canadian.flotte.create')]])
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <th class="py-3 px-6">Avion</th><th class="py-3 px-4">Immatriculation</th><th class="py-3 px-4">Sièges</th><th class="py-3 px-4">Vols à venir</th><th class="py-3 px-4">État</th><th class="py-3 px-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($flottes as $f)
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-6"><p class="font-bold text-slate-900">{{ $f->modele ?: $f->nom_appareil }}</p><p class="text-xs text-slate-400">{{ $f->annee ? 'Mis en service en ' . $f->annee : 'Année non précisée' }}</p></td>
+                                <td class="py-3.5 px-4 font-mono font-bold text-slate-700">{{ $f->immatriculation ?: '—' }}</td>
+                                <td class="py-3.5 px-4 font-bold">{{ $f->capacite_places }}</td>
+                                <td class="py-3.5 px-4">{{ $f->vols_a_venir }}</td>
+                                <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold {{ $styles[$f->statut] ?? 'bg-slate-100 text-slate-600' }}">{{ \App\Http\Controllers\Admin\Canadian\FlotteController::STATUTS[$f->statut] ?? $f->statut }}</span></td>
+                                <td class="py-3.5 px-6">
+                                    <div class="flex justify-end gap-1.5">
+                                        <a href="{{ route('canadian.flotte.edit', $f->id) }}" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></a>
+                                        <form method="POST" action="{{ route('canadian.flotte.destroy', $f->id) }}" onsubmit="return confirm('Retirer cet avion de la flotte ?')">
+                                            @csrf @method('DELETE')
+                                            <button class="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-trash text-xs"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-            <p class="text-2xl font-black text-slate-900">{{ $flottes->count() }}</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <i class="fa-solid fa-check-circle"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Actifs</p>
-            </div>
-            <p class="text-2xl font-black text-slate-900">
-                {{ $flottes->where('statut', 'Actif')->count() }}
-            </p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-amber-100 text-amber-600 rounded-lg">
-                    <i class="fa-solid fa-wrench"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Maintenance</p>
-            </div>
-            <p class="text-2xl font-black text-slate-900">
-                {{ $flottes->where('statut', 'Maintenance')->count() }}
-            </p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-slate-100 text-slate-600 rounded-lg">
-                    <i class="fa-solid fa-chair"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Places</p>
-            </div>
-            <p class="text-2xl font-black text-slate-900">{{ $flottes->sum('capacite_places') }}</p>
-        </div>
-    </div>
-
-    {{-- Grille des aéronefs --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        @forelse($flottes as $avion)
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition overflow-hidden group">
-
-                {{-- Bannière --}}
-                <div class="h-32 bg-gradient-to-br from-[#C62828] to-[#8E0000] relative overflow-hidden">
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <i class="fa-solid fa-plane text-6xl text-white/20 group-hover:scale-110 transition-transform duration-500"></i>
-                    </div>
-                    <div class="absolute top-3 right-3">
-                        @php
-                            $statuts = [
-                                'Actif'       => 'bg-emerald-500 text-white',
-                                'Maintenance' => 'bg-amber-500 text-white',
-                                'Inactif'     => 'bg-slate-500 text-white',
-                            ];
-                        @endphp
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ $statuts[$avion->statut] ?? 'bg-slate-500 text-white' }}">
-                            {{ $avion->statut ?? 'Actif' }}
-                        </span>
-                    </div>
-                </div>
-
-                {{-- Contenu --}}
-                <div class="p-5">
-                    <div class="flex items-start justify-between mb-3">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-lg">
-                                {{ $avion->modele ?? 'Modèle inconnu' }}
-                            </h3>
-                            <p class="text-xs text-slate-500">
-                                {{ $avion->nom_appareil ?? 'Air Canadian' }}
-                            </p>
-                        </div>
-                        <div class="p-2 bg-red-50 text-[#C62828] rounded-lg">
-                            <i class="fa-solid fa-plane"></i>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
-                        <div>
-                            <p class="text-xs text-slate-500">Capacité</p>
-                            <p class="font-bold text-slate-900">{{ $avion->capacite_places ?? 0 }} places</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-slate-500">Année</p>
-                            <p class="font-bold text-slate-900">{{ $avion->annee ?? '—' }}</p>
-                        </div>
-                    </div>
-
-                    {{-- Actions --}}
-                    <div class="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-                        <a href="{{ route('canadian.flotte.show', $avion->id) }}"
-                           class="flex-1 text-center px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">
-                            <i class="fa-solid fa-eye mr-1"></i> Voir
-                        </a>
-                        <a href="{{ route('canadian.flotte.edit', $avion->id) }}"
-                           class="flex-1 text-center px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold rounded-lg transition">
-                            <i class="fa-solid fa-pen mr-1"></i> Modifier
-                        </a>
-                        <form action="{{ route('canadian.flotte.destroy', $avion->id) }}" method="POST"
-                              class="flex-1" onsubmit="return confirm('Supprimer cet aéronef ?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                    class="w-full px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-lg transition">
-                                <i class="fa-solid fa-trash mr-1"></i> Suppr.
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="col-span-full bg-white rounded-2xl border border-slate-200 shadow-sm p-16 text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
-                    <i class="fa-solid fa-plane text-2xl text-slate-400"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-700 mb-2">Aucun aéronef</h3>
-                <p class="text-sm text-slate-500 mb-4">
-                    Commencez par ajouter votre premier aéronef à la flotte
-                </p>
-                <a href="{{ route('canadian.flotte.create') }}"
-                   class="inline-flex items-center px-4 py-2 bg-[#C62828] hover:bg-[#8E0000] text-white text-sm font-semibold rounded-lg transition">
-                    <i class="fa-solid fa-plus mr-2"></i> Ajouter un aéronef
-                </a>
-            </div>
-        @endforelse
+            @if($flottes->hasPages())<div class="px-6 py-4 border-t border-slate-100">{{ $flottes->links() }}</div>@endif
+        @endif
     </div>
 </div>
 @endsection

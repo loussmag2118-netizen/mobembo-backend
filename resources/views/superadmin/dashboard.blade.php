@@ -53,7 +53,7 @@
             <table class="w-full text-left">
                 <thead>
                     <tr class="text-xs font-black uppercase tracking-wider text-slate-500 border-b border-slate-100">
-                        <th class="py-3 px-6">Agence</th>
+                        <th class="py-3 px-6">Partenaire</th>
                         <th class="py-3 px-4">Statut</th>
                         <th class="py-3 px-4 text-right">Agents</th>
                         <th class="py-3 px-4 text-right">Bus</th>
@@ -68,7 +68,11 @@
                             <td class="py-3.5 px-6">
                                 <a href="{{ route('superadmin.agences.show', $ligne->agence) }}" class="font-extrabold text-slate-900 hover:text-emerald-700">{{ $ligne->agence->nom_agence }}</a>
                                 <div class="text-xs text-slate-400 font-semibold">
-                                    Enfant ≤ {{ $ligne->agence->age_max_enfant }} ans{{ $ligne->agence->choix_siege ? ' · choix du siège' : '' }}
+                                    @if($ligne->agence->estAerien())
+                                        <span class="text-sky-700"><i class="fa-solid fa-plane text-[10px]"></i> Compagnie aérienne</span> · départs = vols, billets = places payées
+                                    @else
+                                        <i class="fa-solid fa-bus text-[10px]"></i> Enfant ≤ {{ $ligne->agence->age_max_enfant }} ans{{ $ligne->agence->choix_siege ? ' · choix du siège' : '' }}
+                                    @endif
                                 </div>
                             </td>
                             <td class="py-3.5 px-4">

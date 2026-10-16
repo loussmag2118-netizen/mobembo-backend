@@ -77,7 +77,7 @@
                     <div>
                         <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-plus-circle text-emerald-600"></i>
-                            <span>Nouvelle Agence Partenaire</span>
+                            <span>Nouveau partenaire (bus ou aérien)</span>
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">
                             Créez l'agence et générez immédiatement les identifiants de son administrateur.
@@ -101,11 +101,28 @@
                         <!-- Section Agence -->
                         <div class="mb-6">
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
-                                <i class="fa-solid fa-building text-slate-400"></i> Informations Agence
+                                <i class="fa-solid fa-building text-slate-400"></i> Informations du partenaire
                             </h3>
+                            {{-- Type de partenaire : chacun aura l'espace de gestion de son métier --}}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4" x-data="{ type: @js(old('type_transport', 'bus')) }">
+                                @foreach(['bus' => ['Compagnie de bus', 'fa-bus', 'Agences, bus, trajets, départs, agents d\'embarquement'], 'aerien' => ['Compagnie aérienne', 'fa-plane', 'Vols, flotte, classes tarifaires, réservations PNR']] as $valeur => [$titre, $icone, $detail])
+                                    <label class="relative flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all"
+                                           :class="type === '{{ $valeur }}' ? 'border-emerald-600 bg-emerald-50/60' : 'border-slate-200 hover:border-slate-300'">
+                                        <input type="radio" name="type_transport" value="{{ $valeur }}" x-model="type" class="sr-only">
+                                        <span class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                                              :class="type === '{{ $valeur }}' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'">
+                                            <i class="fa-solid {{ $icone }}"></i>
+                                        </span>
+                                        <span>
+                                            <span class="block text-sm font-black text-slate-900">{{ $titre }}</span>
+                                            <span class="block text-xs text-slate-500 mt-0.5">{{ $detail }}</span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom de l'agence <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1.5">Nom du partenaire <span class="text-red-500">*</span></label>
                                     <input type="text" name="nom_agence" value="{{ old('nom_agence') }}" required placeholder="Ex: Mikalou Express" @input="window.dispatchEvent(new CustomEvent('nom-agence', { detail: $event.target.value }))" 
                                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none transition-all">
                                 </div>
@@ -211,6 +228,14 @@
                             <span>Liste des Agences Partenaires ({{ $agences->total() }})</span>
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">Contrôlez les statuts et l'accès au réseau</p>
+                        <div class="flex flex-wrap gap-1.5 mt-3">
+                            @foreach(['' => 'Tous', 'bus' => 'Bus', 'aerien' => 'Aérien'] as $cle => $libelle)
+                                <a href="{{ route('superadmin.agences.index', array_filter(['type' => $cle])) }}"
+                                   class="text-xs font-bold px-3 py-1.5 rounded-full border transition-all {{ ($type ?? '') === $cle ? 'bg-[#124231] text-white border-[#124231]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300' }}">
+                                    {{ $libelle }}
+                                </a>
+                            @endforeach
+                        </div>
                     </div>
 
                     <!-- Champ de recherche instantané (Alpine.js) -->
@@ -227,10 +252,10 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                <th class="py-3.5 px-6">Agence Partenaire</th>
+                                <th class="py-3.5 px-6">Partenaire</th>
                                 <th class="py-3.5 px-6">Administrateur</th>
                                 <th class="py-3.5 px-6">Agents Inscrits</th>
-                                <th class="py-3.5 px-6">Bus Attribués</th>
+                                <th class="py-3.5 px-6">Bus / Vols</th>
                                 <th class="py-3.5 px-6">Statut Réseau</th>
                                 <th class="py-3.5 px-6 text-right">Action de Contrôle</th>
                             </tr>
@@ -257,7 +282,14 @@
                                             @endif
                                             <div>
                                                 <a href="{{ route('superadmin.agences.show', $agence) }}" class="font-extrabold text-slate-900 hover:text-emerald-700 hover:underline">{{ $agence->nom_agence }}</a>
-                                                <div class="text-[11px] text-slate-400">Partenaire depuis le {{ \Carbon\Carbon::parse($agence->date_partenariat)->format('d/m/Y') }}</div>
+                                                <div class="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+                                                    @if($agence->estAerien())
+                                                        <span class="font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded"><i class="fa-solid fa-plane text-[9px]"></i> Aérien</span>
+                                                    @else
+                                                        <span class="font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"><i class="fa-solid fa-bus text-[9px]"></i> Bus</span>
+                                                    @endif
+                                                    <span>Partenaire depuis le {{ \Carbon\Carbon::parse($agence->date_partenariat)->format('d/m/Y') }}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -277,18 +309,29 @@
 
                                     {{-- Agents --}}
                                     <td class="py-4 px-6">
+                                        @if($agence->estAerien())
+                                            <span class="text-xs text-slate-400">—</span>
+                                        @else
                                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700">
                                             <i class="fa-solid fa-user-tie text-[10px]"></i>
                                             {{ $agence->agents_count }} agents
                                         </span>
+                                        @endif
                                     </td>
 
                                     {{-- Bus --}}
                                     <td class="py-4 px-6">
+                                        @if($agence->estAerien())
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700">
+                                                <i class="fa-solid fa-plane text-[10px]"></i>
+                                                {{ $agence->vols_count }} vols
+                                            </span>
+                                        @else
                                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700">
                                             <i class="fa-solid fa-bus text-[10px]"></i>
                                             {{ $agence->bus_count }} bus
                                         </span>
+                                        @endif
                                     </td>
 
                                     {{-- Statut Réseau --}}

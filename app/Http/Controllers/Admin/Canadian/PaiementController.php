@@ -2,88 +2,63 @@
 
 namespace App\Http\Controllers\Admin\Canadian;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Paiement;
+use Illuminate\Http\Request;
 
-class PaiementController extends Controller
+/**
+ * Encaissements confirmés par MTN / Airtel pour les réservations de la compagnie.
+ */
+class PaiementController extends EspaceAerienController
 {
-    /**
-     * Liste des paiements et transactions.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $paiements = Paiement::latest()->paginate(5)->withQueryString();
+        $paiements = $this->filtrer($request)->with('reservation.vol')->latest()->paginate(5)->withQueryString();
 
-        // Statistiques
-        $revenus    = Paiement::where('statut', 'Reussi')->sum('montant');
-        $reussies   = Paiement::where('statut', 'Reussi')->count();
-        $en_attente = Paiement::where('statut', 'En_Attente')->count();
-
-        return view('admin.canadian.paiements.index', compact(
-            'paiements',
-            'revenus',
-            'reussies',
-            'en_attente'
-        ));
-    }
-
-    /**
-     * Détails d'un paiement.
-     */
-    public function show($id)
-    {
-        $paiement = Paiement::findOrFail($id);
-
-        return view('admin.canadian.paiements.show', compact('paiement'));
-    }
-
-    /**
-     * Export CSV des paiements.
-     */
-    public function export()
-    {
-        $filename = 'paiements_canadian_' . date('Y-m-d') . '.csv';
-
-        $headers = [
-            'Content-Type'        => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        $base = Paiement::deLaCompagnie($this->compagnieId())->where('statut', 'Reussi');
+        $stats = [
+            'total'   => (float) (clone $base)->sum('montant'),
+            'mois'    => (float) (clone $base)->where('created_at', '>=', now()->startOfMonth())->sum('montant'),
+            'jour'    => (float) (clone $base)->whereDate('created_at', today())->sum('montant'),
+            'nombre'  => (clone $base)->count(),
         ];
+        $parMethode = (clone $base)->selectRaw('methode, SUM(montant) AS total')->groupBy('methode')->pluck('total', 'methode');
 
-        $callback = function () {
-            $file = fopen('php://output', 'w');
+        return view('admin.canadian.paiements.index', compact('paiements', 'stats', 'parMethode'));
+    }
 
-            // En-têtes CSV
-            fputcsv($file, [
-                'ID',
-                'Référence',
-                'Client',
-                'Téléphone',
-                'Méthode',
-                'Montant (FCFA)',
-                'Statut',
-                'Date',
-            ]);
+    public function export(Request $request)
+    {
+        $nom = 'paiements_' . \Illuminate\Support\Str::slug($this->compagnie()->nom_agence) . '_' . date('Y-m-d') . '.csv';
+        $requete = $this->filtrer($request)->with('reservation.vol')->orderByDesc('created_at');
 
-            // Données
-            Paiement::orderByDesc('created_at')->chunk(500, function ($paiements) use ($file) {
+        return response()->streamDownload(function () use ($requete) {
+            $f = fopen('php://output', 'w');
+            fwrite($f, "\xEF\xBB\xBF");   // accents lisibles dans Excel
+            fputcsv($f, ['Date', 'Transaction', 'Réservation', 'Vol', 'Client', 'Téléphone', 'Moyen', 'Montant (FCFA)', 'Statut'], ';');
+            $requete->chunk(500, function ($paiements) use ($f) {
                 foreach ($paiements as $p) {
-                    fputcsv($file, [
-                        $p->id,
-                        $p->reference_transaction ?? '—',
-                        $p->nom_client ?? '—',
-                        $p->telephone_client ?? '—',
-                        $p->methode ?? '—',
-                        $p->montant ?? 0,
-                        $p->statut ?? '—',
-                        $p->created_at?->format('d/m/Y H:i') ?? '—',
-                    ]);
+                    fputcsv($f, [
+                        $p->created_at?->format('d/m/Y H:i'), $p->reference_transaction, $p->reservation?->reference,
+                        $p->reservation?->vol?->numero_vol, $p->nom_client, $p->telephone_client, $p->methode,
+                        (int) $p->montant, $p->statut,
+                    ], ';');
                 }
             });
+            fclose($f);
+        }, $nom, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+    private function filtrer(Request $request)
+    {
+        return Paiement::deLaCompagnie($this->compagnieId())
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $t = trim($request->q);
+                $q->where(fn ($w) => $w->where('reference_transaction', 'like', "%{$t}%")
+                    ->orWhere('nom_client', 'like', "%{$t}%")
+                    ->orWhere('telephone_client', 'like', "%{$t}%"));
+            })
+            ->when(in_array($request->methode, ['MTN', 'Airtel'], true), fn ($q) => $q->where('methode', $request->methode))
+            ->when($request->filled('du'), fn ($q) => $q->whereDate('created_at', '>=', $request->du))
+            ->when($request->filled('au'), fn ($q) => $q->whereDate('created_at', '<=', $request->au));
     }
 }

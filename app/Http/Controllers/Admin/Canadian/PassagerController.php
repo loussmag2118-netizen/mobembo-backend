@@ -2,37 +2,32 @@
 
 namespace App\Http\Controllers\Admin\Canadian;
 
-use App\Http\Controllers\Controller;
 use App\Models\Passager;
 use Illuminate\Http\Request;
 
-class PassagerController extends Controller
+/**
+ * Passagers des réservations de la compagnie (listes d'embarquement).
+ */
+class PassagerController extends EspaceAerienController
 {
     public function index(Request $request)
     {
-        $query = Passager::with('reservation.vol');
+        $agenceId = $this->compagnieId();
 
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nom', 'like', "%{$q}%")
-                    ->orWhere('prenom', 'like', "%{$q}%")
-                    ->orWhere('numero_passeport', 'like', "%{$q}%");
-            });
-        }
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        $passagers = $query->latest()->paginate(5)->withQueryString();
+        $passagers = Passager::with('reservation.vol')
+            ->whereHas('reservation', fn ($r) => $r->where('agence_id', $agenceId)
+                ->when($request->boolean('payes', true), fn ($q) => $q->whereIn('statut', ['Paye', 'Confirmee'])))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $t = trim($request->q);
+                $q->where(fn ($w) => $w->where('nom', 'like', "%{$t}%")
+                    ->orWhere('prenom', 'like', "%{$t}%")
+                    ->orWhere('numero_passeport', 'like', "%{$t}%"));
+            })
+            ->when($request->filled('vol'), fn ($q) => $q->whereHas('reservation.vol', fn ($v) => $v->where('numero_vol', 'like', '%' . trim($request->vol) . '%')))
+            ->when(in_array($request->type, ['adulte', 'enfant', 'bebe'], true), fn ($q) => $q->where('type', $request->type))
+            ->latest()
+            ->paginate(5)->withQueryString();
 
         return view('admin.canadian.passagers.index', compact('passagers'));
-    }
-
-    public function show($id)
-    {
-        $passager = Passager::with('reservation.vol')->findOrFail($id);
-        return view('admin.canadian.passagers.show', compact('passager'));
     }
 }

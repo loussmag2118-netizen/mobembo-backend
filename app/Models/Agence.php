@@ -10,9 +10,45 @@ use Illuminate\Support\Facades\DB;
 class Agence extends Model
 {
     protected $table = 'agences';
-    protected $fillable = ['nom_agence', 'slogan', 'couleur', 'couleur_secondaire', 'logo_media_id', 'statut', 'age_max_enfant', 'choix_siege', 'date_partenariat', 'superadmin_id'];
+
+    // Type de partenaire : compagnie de bus ou compagnie aérienne
+    public const BUS    = 'bus';
+    public const AERIEN = 'aerien';
+    protected $fillable = ['nom_agence', 'type_transport', 'slogan', 'couleur', 'couleur_secondaire', 'logo_media_id', 'statut', 'age_max_enfant', 'choix_siege', 'date_partenariat', 'superadmin_id'];
 
     protected $casts = ['age_max_enfant' => 'integer', 'choix_siege' => 'boolean'];
+
+    protected $attributes = ['type_transport' => self::BUS];
+
+    public function estAerien(): bool
+    {
+        return $this->type_transport === self::AERIEN;
+    }
+
+    public function scopeDeBus($query)
+    {
+        return $query->where('type_transport', self::BUS);
+    }
+
+    public function scopeAeriennes($query)
+    {
+        return $query->where('type_transport', self::AERIEN);
+    }
+
+    public function vols()
+    {
+        return $this->hasMany(Vol::class, 'agence_id');
+    }
+
+    public function flottes()
+    {
+        return $this->hasMany(Flotte::class, 'agence_id');
+    }
+
+    public function reservationsVols()
+    {
+        return $this->hasMany(Reservation::class, 'agence_id');
+    }
 
     public function superAdmin()
     {

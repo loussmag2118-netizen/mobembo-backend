@@ -1,248 +1,75 @@
 @extends('layouts.admin')
 
+@section('title', 'Réservations')
+@section('header_icon', 'fa-ticket')
+@section('header_title', 'Réservations')
+@section('header_subtitle', 'Réservations faites dans l\'application : une réservation non payée libère ses places après 15 minutes')
+
 @section('content')
+@php $statuts = \App\Http\Controllers\Admin\Canadian\ReservationController::STATUTS; @endphp
 <div class="space-y-6">
-
-    {{-- En-tête --}}
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-black text-slate-900">Gestion des Réservations</h1>
-            <p class="text-sm text-slate-500 mt-1">
-                Consultez et gérez toutes les réservations de billets
-            </p>
-        </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @include('admin.canadian.partials.stat', ['titre' => 'Payées', 'valeur' => ($compteurs['Paye'] ?? 0) + ($compteurs['Confirmee'] ?? 0), 'icone' => 'fa-circle-check', 'teinte' => 'emerald'])
+        @include('admin.canadian.partials.stat', ['titre' => 'En attente de paiement', 'valeur' => $compteurs['En_Attente'] ?? 0, 'icone' => 'fa-hourglass-half', 'teinte' => 'amber'])
+        @include('admin.canadian.partials.stat', ['titre' => 'À rembourser', 'valeur' => $compteurs['A_Rembourser'] ?? 0, 'icone' => 'fa-rotate-left', 'teinte' => 'rose'])
+        @include('admin.canadian.partials.stat', ['titre' => 'Annulées / expirées', 'valeur' => ($compteurs['Annulee'] ?? 0) + ($compteurs['Expiree'] ?? 0) + ($compteurs['Echouee'] ?? 0), 'icone' => 'fa-ban', 'teinte' => 'slate'])
     </div>
 
-    {{-- Messages --}}
-    @if(session('success'))
-        <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl flex items-center gap-3">
-            <i class="fa-solid fa-check-circle"></i>
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-3">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            {{ session('error') }}
-        </div>
-    @endif
-
-    {{-- Cartes statistiques --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-sky-100 text-sky-600 rounded-lg">
-                    <i class="fa-solid fa-ticket"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total</p>
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <form method="GET" class="p-5 sm:px-6 border-b border-slate-100 flex flex-col sm:flex-row gap-2">
+            <div class="relative sm:w-72">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="Référence, PNR, nom, téléphone, vol…"
+                       class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#124231] focus:outline-none">
             </div>
-            <p class="text-2xl font-black text-slate-900">{{ $total ?? 0 }}</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <i class="fa-solid fa-check"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Confirmées</p>
-            </div>
-            <p class="text-2xl font-black text-slate-900">{{ $confirmees ?? 0 }}</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-amber-100 text-amber-600 rounded-lg">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">En attente</p>
-            </div>
-            <p class="text-2xl font-black text-slate-900">{{ $en_attente ?? 0 }}</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-red-100 text-[#C62828] rounded-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Annulées</p>
-            </div>
-            <p class="text-2xl font-black text-slate-900">{{ $annulees ?? 0 }}</p>
-        </div>
-    </div>
-
-    {{-- Filtres --}}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <form method="GET" action="{{ route('canadian.reservations.index') }}"
-              class="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Recherche</label>
-                <input type="text" name="q" value="{{ request('q') }}"
-                       placeholder="Référence, client, numéro vol..."
-                       class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#C62828] focus:outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Statut</label>
-                <select name="statut"
-                        class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#C62828] focus:outline-none bg-white">
-                    <option value="">Tous</option>
-                    <option value="Confirmee"  {{ request('statut') == 'Confirmee'  ? 'selected' : '' }}>Confirmée</option>
-                    <option value="En_Attente" {{ request('statut') == 'En_Attente' ? 'selected' : '' }}>En attente</option>
-                    <option value="Annulee"    {{ request('statut') == 'Annulee'    ? 'selected' : '' }}>Annulée</option>
-                    <option value="Remboursee" {{ request('statut') == 'Remboursee' ? 'selected' : '' }}>Remboursée</option>
-                </select>
-            </div>
-            <div class="flex items-end gap-2">
-                <button type="submit"
-                        class="flex-1 bg-[#C62828] hover:bg-[#8E0000] text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-                    <i class="fa-solid fa-filter mr-1"></i> Filtrer
-                </button>
-                <a href="{{ route('canadian.reservations.index') }}"
-                   class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold transition">
-                    <i class="fa-solid fa-rotate"></i>
-                </a>
-            </div>
+            <select name="statut" onchange="this.form.submit()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600">
+                <option value="">Tous les statuts</option>
+                @foreach($statuts as $cle => $libelle)
+                    <option value="{{ $cle }}" @selected(request('statut') === $cle)>{{ $libelle }} ({{ $compteurs[$cle] ?? 0 }})</option>
+                @endforeach
+            </select>
+            <button class="bg-[#124231] hover:bg-[#0c2f23] text-white text-sm font-bold py-2 px-4 rounded-xl">Rechercher</button>
+            @if(request()->hasAny(['q', 'statut']))
+                <a href="{{ route('canadian.reservations.index') }}" class="text-sm font-bold text-slate-500 hover:text-slate-800 py-2 px-3 text-center">Effacer</a>
+            @endif
         </form>
-    </div>
 
-    {{-- Tableau --}}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500">Référence</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500">Client</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500">Vol</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500">Places</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500">Montant</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500">Statut</th>
-                        <th class="px-5 py-3 text-xs font-bold uppercase text-slate-500 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-sm">
-                @forelse($reservations as $resa)
-                    <tr class="hover:bg-slate-50/50 transition">
-                        {{-- Référence --}}
-                        <td class="px-5 py-4">
-                            <span class="font-mono text-xs font-bold text-[#C62828] bg-red-50 px-2 py-1 rounded">
-                                {{ $resa->reference ?? 'RES-' . str_pad($resa->id, 5, '0', STR_PAD_LEFT) }}
-                            </span>
-                        </td>
-
-                        {{-- Client --}}
-                        <td class="px-5 py-4">
-                            @if($resa->canadianUser)
-                                <div class="font-semibold text-slate-900">
-                                    {{ $resa->canadianUser->prenom }} {{ $resa->canadianUser->nom }}
-                                </div>
-                                <div class="text-xs text-slate-500">
-                                    {{ $resa->canadianUser->telephone ?? '' }}
-                                </div>
-                            @elseif($resa->utilisateur)
-                                <div class="font-semibold text-slate-900">
-                                    {{ $resa->utilisateur->nom ?? '' }} {{ $resa->utilisateur->prenom ?? '' }}
-                                </div>
-                                <div class="text-xs text-slate-500">
-                                    {{ $resa->utilisateur->telephone ?? '' }}
-                                </div>
-                            @else
-                                <span class="text-xs text-slate-400">Client inconnu</span>
-                            @endif
-                        </td>
-
-                        {{-- Vol --}}
-                        <td class="px-5 py-4">
-                            @if($resa->vol)
-                                <div class="font-mono font-semibold text-slate-900">
-                                    {{ $resa->vol->numero_vol }}
-                                </div>
-                                <div class="text-xs text-slate-500">
-                                    {{ $resa->vol->ville_depart ?? $resa->vol->origine }}
-                                    → {{ $resa->vol->ville_arrivee ?? $resa->vol->destination }}
-                                </div>
-                            @else
-                                <span class="text-slate-400">—</span>
-                            @endif
-                        </td>
-
-                        {{-- Places --}}
-                        <td class="px-5 py-4">
-                            <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-semibold">
-                                {{ $resa->nombre_places ?? 1 }} place(s)
-                            </span>
-                        </td>
-
-                        {{-- Montant --}}
-                        <td class="px-5 py-4 font-semibold text-slate-900">
-                            {{ number_format($resa->montant_total ?? 0, 0, ',', ' ') }} FCFA
-                        </td>
-
-                        {{-- Statut --}}
-                        <td class="px-5 py-4">
-                            @php
-                                $badges = [
-                                    'Confirmee'  => 'bg-emerald-50 text-emerald-700',
-                                    'En_Attente' => 'bg-amber-50 text-amber-700',
-                                    'Annulee'    => 'bg-red-50 text-[#C62828]',
-                                    'Remboursee' => 'bg-slate-100 text-slate-700',
-                                ];
-                                $statut = $resa->statut ?? 'En_Attente';
-                            @endphp
-                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $badges[$statut] ?? 'bg-slate-100 text-slate-700' }}">
-                                {{ str_replace('_', ' ', $statut) }}
-                            </span>
-                        </td>
-
-                        {{-- Actions --}}
-                        <td class="px-5 py-4">
-                            <div class="flex justify-end items-center gap-3">
-                                <a href="{{ route('canadian.reservations.show', $resa->id) }}"
-                                   class="text-slate-500 hover:text-[#C62828] transition" title="Voir">
-                                    <i class="fa-solid fa-eye"></i>
-                                </a>
-                                @if(in_array($resa->statut, ['Confirmee', 'En_Attente']))
-                                    <form action="{{ route('canadian.reservations.annuler', $resa->id) }}" method="POST"
-                                          class="inline" onsubmit="return confirm('Annuler cette réservation ?')">
-                                        @csrf
-                                        <button type="submit" class="text-amber-600 hover:text-amber-800 transition" title="Annuler">
-                                            <i class="fa-solid fa-ban"></i>
-                                        </button>
-                                    </form>
-                                @endif
-                                @if($resa->statut === 'Confirmee')
-                                    <form action="{{ route('canadian.reservations.rembourser', $resa->id) }}" method="POST"
-                                          class="inline" onsubmit="return confirm('Rembourser cette réservation ?')">
-                                        @csrf
-                                        <button type="submit" class="text-[#C62828] hover:text-[#8E0000] transition" title="Rembourser">
-                                            <i class="fa-solid fa-money-bill-wave"></i>
-                                        </button>
-                                    </form>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" class="px-5 py-16 text-center">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
-                                <i class="fa-solid fa-passport text-2xl text-slate-400"></i>
-                            </div>
-                            <h3 class="text-lg font-bold text-slate-700 mb-2">Aucune réservation</h3>
-                            <p class="text-sm text-slate-500">
-                                Les réservations apparaîtront ici dès qu'elles seront créées.
-                            </p>
-                        </td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        @if(isset($reservations) && method_exists($reservations, 'hasPages') && $reservations->hasPages())
-            <div class="px-5 py-4 border-t border-slate-200 bg-slate-50">
-                {{ $reservations->links() }}
+        @if($reservations->isEmpty())
+            @include('admin.canadian.partials.vide', ['icone' => 'fa-ticket', 'titre' => 'Aucune réservation', 'texte' => request()->hasAny(['q', 'statut']) ? 'Aucune réservation ne correspond à ces critères.' : 'Les réservations faites depuis l\'application apparaîtront ici.'])
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <th class="py-3 px-6">Référence</th><th class="py-3 px-4">Client</th><th class="py-3 px-4">Vol</th><th class="py-3 px-4">Places</th><th class="py-3 px-4">Montant</th><th class="py-3 px-4">Statut</th><th class="py-3 px-6 text-right"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($reservations as $r)
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-6">
+                                    <p class="font-mono font-bold text-slate-900">{{ $r->reference }}</p>
+                                    <p class="text-xs text-slate-400">{{ $r->code_pnr ? 'PNR ' . $r->code_pnr . ' · ' : '' }}{{ $r->created_at?->format('d/m/Y H:i') }}</p>
+                                </td>
+                                <td class="py-3.5 px-4"><p class="font-semibold text-slate-800">{{ $r->nom_passager ?: ($r->canadianUser?->name ?? '—') }}</p><p class="text-xs text-slate-400">{{ $r->telephone }}</p></td>
+                                <td class="py-3.5 px-4">
+                                    @if($r->vol)
+                                        <p class="font-mono font-bold text-slate-800">{{ $r->vol->numero_vol }}</p>
+                                        <p class="text-xs text-slate-400">{{ $r->vol->ville_depart }} → {{ $r->vol->ville_arrivee }} · {{ $r->vol->date_depart?->format('d/m H:i') }}</p>
+                                    @else — @endif
+                                </td>
+                                <td class="py-3.5 px-4 font-bold">{{ $r->nombre_places }}</td>
+                                <td class="py-3.5 px-4 font-bold whitespace-nowrap">{{ number_format($r->montant_total, 0, ',', ' ') }} F</td>
+                                <td class="py-3.5 px-4">@include('admin.canadian.partials.statut-reservation', ['statut' => $r->statut])</td>
+                                <td class="py-3.5 px-6 text-right">
+                                    <a href="{{ route('canadian.reservations.show', $r->id) }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl">Ouvrir <i class="fa-solid fa-chevron-right text-[10px]"></i></a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
+            @if($reservations->hasPages())<div class="px-6 py-4 border-t border-slate-100">{{ $reservations->links() }}</div>@endif
         @endif
     </div>
 </div>

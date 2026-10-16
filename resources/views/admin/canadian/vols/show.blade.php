@@ -1,187 +1,81 @@
 @extends('layouts.admin')
 
+@section('title', 'Vol ' . $vol->numero_vol)
+@section('header_icon', 'fa-plane-departure')
+@section('header_title', 'Vol ' . $vol->numero_vol)
+@section('header_subtitle', $vol->ville_depart . ' → ' . $vol->ville_arrivee . ' · ' . $vol->date_depart?->locale('fr')->isoFormat('dddd D MMMM YYYY [à] HH:mm'))
+
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6">
-
-    {{-- En-tête --}}
-    <div class="flex items-center gap-4">
-        <a href="{{ route('canadian.vols.index') }}"
-           class="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition">
-            <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <div class="flex-1">
-            <h1 class="text-2xl font-black text-slate-900">
-                Vol <span class="font-mono text-[#C62828]">{{ $vol->numero_vol }}</span>
-            </h1>
-            <p class="text-sm text-slate-500 mt-1">
-                {{ $vol->origine }} → {{ $vol->destination }}
-            </p>
+@php
+    $total = $vol->places_totales ?? $vol->places_disponibles;
+    $taux = $total > 0 ? round($occupees / $total * 100) : 0;
+@endphp
+<div class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <a href="{{ route('canadian.vols.index') }}" class="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900"><i class="fa-solid fa-arrow-left"></i> Tous les vols</a>
+        <div class="flex gap-2">
+            @include('admin.canadian.partials.statut-vol', ['statut' => $vol->statut])
+            <a href="{{ route('canadian.vols.edit', $vol->id) }}" class="inline-flex items-center gap-2 bg-[#124231] hover:bg-[#0c2f23] text-white text-sm font-bold py-2 px-4 rounded-xl"><i class="fa-solid fa-pen"></i> Modifier</a>
         </div>
-        <a href="{{ route('canadian.vols.edit', $vol->id) }}"
-           class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-[#C62828] to-[#8E0000] hover:from-[#E53935] hover:to-[#C62828] text-white font-semibold rounded-xl shadow-lg shadow-red-500/20 transition">
-            <i class="fa-solid fa-pen mr-2"></i> Modifier
-        </a>
     </div>
 
-    @if(session('success'))
-        <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl flex items-center gap-3">
-            <i class="fa-solid fa-check-circle"></i>
-            {{ session('success') }}
-        </div>
-    @endif
-
-    {{-- Bannière vol --}}
-    <div class="bg-gradient-to-br from-[#C62828] to-[#8E0000] rounded-2xl p-8 text-white shadow-lg shadow-red-500/20 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10">
-            <i class="fa-solid fa-plane absolute right-8 top-1/2 -translate-y-1/2 text-8xl"></i>
-        </div>
-        <div class="relative flex items-center justify-between flex-wrap gap-6">
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
             <div>
-                <p class="text-xs uppercase tracking-wider text-white/70 mb-1">Départ</p>
-                <p class="text-2xl font-black">{{ $vol->origine }}</p>
-                <p class="text-sm text-white/80 mt-1">
-                    {{ $vol->date_depart ? $vol->date_depart->format('d/m/Y H:i') : '—' }}
-                </p>
-                @if($vol->ville_depart)
-                    <p class="text-xs text-white/60 mt-0.5">
-                        {{ $vol->ville_depart }} @if($vol->ville_depart_iata) ({{ $vol->ville_depart_iata }}) @endif
-                    </p>
-                @endif
+                <p class="text-4xl font-black text-slate-900 font-mono">{{ $vol->ville_depart_iata ?: '—' }}</p>
+                <p class="font-bold text-slate-700">{{ $vol->ville_depart }}</p>
+                <p class="text-sm text-slate-500">{{ $vol->date_depart?->format('d/m/Y · H:i') }}</p>
             </div>
-            <div class="flex flex-col items-center">
-                <i class="fa-solid fa-plane text-3xl opacity-80"></i>
-                <div class="w-24 h-px bg-white/40 my-2"></div>
-                <p class="text-xs text-white/70">{{ $vol->type_vol === 'escale' ? 'Avec escale' : 'Direct' }}</p>
+            <div class="text-center">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $vol->type_vol === 'escale' ? 'Avec escale' : 'Vol direct' }} · {{ $vol->duree_formatee }}</p>
+                <div class="flex items-center gap-2 my-2"><span class="flex-1 h-px bg-slate-200"></span><i class="fa-solid fa-plane text-slate-400"></i><span class="flex-1 h-px bg-slate-200"></span></div>
+                @if($vol->escales)<p class="text-xs text-slate-500">via {{ implode(', ', $vol->escales) }}</p>@endif
+                <p class="text-xs text-slate-400">{{ $vol->avion ?: 'Avion non précisé' }}</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs uppercase tracking-wider text-white/70 mb-1">Arrivée</p>
-                <p class="text-2xl font-black">{{ $vol->destination }}</p>
-                <p class="text-sm text-white/80 mt-1">
-                    {{ $vol->date_arrivee ? $vol->date_arrivee->format('d/m/Y H:i') : '—' }}
-                </p>
-                @if($vol->ville_arrivee)
-                    <p class="text-xs text-white/60 mt-0.5">
-                        {{ $vol->ville_arrivee }} @if($vol->ville_arrivee_iata) ({{ $vol->ville_arrivee_iata }}) @endif
-                    </p>
-                @endif
+            <div class="md:text-right">
+                <p class="text-4xl font-black text-slate-900 font-mono">{{ $vol->ville_arrivee_iata ?: '—' }}</p>
+                <p class="font-bold text-slate-700">{{ $vol->ville_arrivee }}</p>
+                <p class="text-sm text-slate-500">{{ $vol->date_arrivee?->format('d/m/Y · H:i') }}</p>
             </div>
         </div>
     </div>
 
-    {{-- Stats rapides --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Prix unitaire</p>
-            <p class="text-xl font-black text-slate-900">
-                {{ number_format($vol->prix ?? 0, 0, ',', ' ') }}
-            </p>
-            <p class="text-xs text-slate-500 mt-1">FCFA</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Places</p>
-            <p class="text-xl font-black text-slate-900">
-                {{ $vol->places_disponibles ?? 0 }}
-            </p>
-            <p class="text-xs text-slate-500 mt-1">Disponibles</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Type</p>
-            <p class="text-xl font-black text-slate-900">
-                {{ $vol->type_vol === 'escale' ? 'Escale' : 'Direct' }}
-            </p>
-            <p class="text-xs text-slate-500 mt-1">Catégorie</p>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Statut</p>
-            @php
-                $badges = [
-                    'programme' => 'bg-emerald-50 text-emerald-700',
-                    'en_vol'    => 'bg-sky-50 text-sky-700',
-                    'atterri'   => 'bg-slate-100 text-slate-700',
-                    'annule'    => 'bg-red-50 text-[#C62828]',
-                ];
-                $labels = [
-                    'programme' => 'Programmé',
-                    'en_vol'    => 'En vol',
-                    'atterri'   => 'Atterri',
-                    'annule'    => 'Annulé',
-                ];
-            @endphp
-            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold {{ $badges[$vol->statut] ?? 'bg-slate-100 text-slate-700' }}">
-                {{ $labels[$vol->statut] ?? $vol->statut }}
-            </span>
-        </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @include('admin.canadian.partials.stat', ['titre' => 'Prix', 'valeur' => number_format($vol->prix, 0, ',', ' ') . ' F', 'icone' => 'fa-tag', 'teinte' => 'slate'])
+        @include('admin.canadian.partials.stat', ['titre' => 'Places réservées', 'valeur' => $occupees . ' / ' . $total, 'icone' => 'fa-users', 'teinte' => 'sky'])
+        @include('admin.canadian.partials.stat', ['titre' => 'Places restantes', 'valeur' => $vol->places_disponibles, 'icone' => 'fa-chair', 'teinte' => 'emerald'])
+        @include('admin.canadian.partials.stat', ['titre' => 'Remplissage', 'valeur' => $taux . ' %', 'icone' => 'fa-chart-simple', 'teinte' => 'amber'])
     </div>
 
-    {{-- Informations détaillées --}}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-circle-info text-[#C62828]"></i>
-                Détails du vol
-            </h2>
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 sm:px-6 border-b border-slate-100">
+            <h2 class="text-base font-black text-slate-900">Réservations sur ce vol ({{ $reservations->total() }})</h2>
         </div>
-        <div class="divide-y divide-slate-100">
-            <div class="px-6 py-4 flex justify-between">
-                <span class="text-sm text-slate-500">Compagnie</span>
-                <span class="text-sm font-semibold text-slate-900">
-                    {{ $vol->compagnie ?? 'Canadian Airways' }}
-                </span>
+        @if($reservations->isEmpty())
+            @include('admin.canadian.partials.vide', ['icone' => 'fa-ticket', 'titre' => 'Aucune réservation', 'texte' => 'Les réservations faites depuis l\'application apparaîtront ici.'])
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <th class="py-3 px-6">Référence</th><th class="py-3 px-4">Client</th><th class="py-3 px-4">Places</th><th class="py-3 px-4">Montant</th><th class="py-3 px-4">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($reservations as $r)
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3 px-6"><a href="{{ route('canadian.reservations.show', $r->id) }}" class="font-mono font-bold text-slate-900 hover:underline">{{ $r->reference }}</a>@if($r->code_pnr)<p class="text-xs text-slate-400 font-mono">PNR {{ $r->code_pnr }}</p>@endif</td>
+                                <td class="py-3 px-4"><p class="font-semibold text-slate-800">{{ $r->nom_passager ?: ($r->canadianUser?->name ?? '—') }}</p><p class="text-xs text-slate-400">{{ $r->telephone }}</p></td>
+                                <td class="py-3 px-4 font-bold">{{ $r->nombre_places }}</td>
+                                <td class="py-3 px-4 font-bold whitespace-nowrap">{{ number_format($r->montant_total, 0, ',', ' ') }} F</td>
+                                <td class="py-3 px-4">@include('admin.canadian.partials.statut-reservation', ['statut' => $r->statut])</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-            <div class="px-6 py-4 flex justify-between">
-                <span class="text-sm text-slate-500">Numéro de vol</span>
-                <span class="text-sm font-mono font-semibold text-[#C62828]">
-                    {{ $vol->numero_vol }}
-                </span>
-            </div>
-            <div class="px-6 py-4 flex justify-between">
-                <span class="text-sm text-slate-500">Durée</span>
-                <span class="text-sm font-semibold text-slate-900">
-                    {{ $vol->duree_formatee ?: '—' }}
-                </span>
-            </div>
-            <div class="px-6 py-4 flex justify-between">
-                <span class="text-sm text-slate-500">Créé le</span>
-                <span class="text-sm font-semibold text-slate-900">
-                    {{ $vol->created_at ? $vol->created_at->format('d/m/Y à H:i') : '—' }}
-                </span>
-            </div>
-            <div class="px-6 py-4 flex justify-between">
-                <span class="text-sm text-slate-500">Dernière mise à jour</span>
-                <span class="text-sm font-semibold text-slate-900">
-                    {{ $vol->updated_at ? $vol->updated_at->format('d/m/Y à H:i') : '—' }}
-                </span>
-            </div>
-        </div>
-    </div>
-
-    {{-- Actions dangereuses --}}
-    <div class="bg-white rounded-2xl border border-red-200 shadow-sm p-6">
-        <h3 class="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            Zone dangereuse
-        </h3>
-        <div class="flex flex-wrap gap-3">
-            <form action="{{ route('canadian.vols.dupliquer', $vol->id) }}" method="POST">
-                @csrf
-                <button type="submit"
-                        class="px-4 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg text-sm font-semibold transition">
-                    <i class="fa-solid fa-copy mr-2"></i> Dupliquer ce vol
-                </button>
-            </form>
-            <form action="{{ route('canadian.vols.destroy', $vol->id) }}" method="POST"
-                  onsubmit="return confirm('Supprimer définitivement ce vol ?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit"
-                        class="px-4 py-2 bg-red-50 hover:bg-red-100 text-[#C62828] rounded-lg text-sm font-semibold transition">
-                    <i class="fa-solid fa-trash mr-2"></i> Supprimer le vol
-                </button>
-            </form>
-        </div>
+            @if($reservations->hasPages())<div class="px-6 py-4 border-t border-slate-100">{{ $reservations->links() }}</div>@endif
+        @endif
     </div>
 </div>
 @endsection

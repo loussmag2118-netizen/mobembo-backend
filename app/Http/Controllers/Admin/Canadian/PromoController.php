@@ -2,134 +2,91 @@
 
 namespace App\Http\Controllers\Admin\Canadian;
 
-use App\Http\Controllers\Controller;
 use App\Models\Promo;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
-class PromoController extends Controller
+class PromoController extends EspaceAerienController
 {
-    /**
-     * Liste des codes promo.
-     */
     public function index()
     {
-        $promos       = Promo::orderByDesc('created_at')->paginate(5)->withQueryString();
-        $actifs       = Promo::where('actif', true)->count();
-        $expires      = Promo::whereNotNull('date_fin')
-                            ->where('date_fin', '<', now())
-                            ->count();
-        $utilisations = Promo::sum('utilisations');
+        $promos = Promo::deLaCompagnie($this->compagnieId())->latest()->paginate(5)->withQueryString();
 
-        return view('admin.canadian.promos.index', compact(
-            'promos', 'actifs', 'expires', 'utilisations'
-        ));
+        $base = Promo::deLaCompagnie($this->compagnieId());
+        $stats = [
+            'actifs'       => (clone $base)->utilisables()->count(),
+            'expires'      => (clone $base)->whereNotNull('date_fin')->where('date_fin', '<', today())->count(),
+            'utilisations' => (int) (clone $base)->sum('utilisations_count'),
+        ];
+
+        return view('admin.canadian.promos.index', compact('promos', 'stats'));
     }
 
-    /**
-     * Formulaire de création.
-     */
     public function create()
     {
-        return view('admin.canadian.promos.create');
+        return view('admin.canadian.promos.create', ['promo' => new Promo(['type' => 'pourcentage', 'actif' => true, 'date_debut' => today()])]);
     }
 
-    /**
-     * Enregistrer un nouveau code promo.
-     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'code'               => 'required|string|max:50|unique:promos,code',
-            'type_reduction'     => 'required|in:pourcentage,fixe',
-            'valeur'             => 'required|numeric|min:0',
-            'date_debut'         => 'nullable|date',
-            'date_fin'           => 'nullable|date|after_or_equal:date_debut',
-            'limite_utilisation' => 'nullable|integer|min:1',
-            'actif'              => 'boolean',
-        ], [
-            'code.required'                => 'Le code promo est obligatoire.',
-            'code.unique'                  => 'Ce code existe déjà.',
-            'type_reduction.required'      => 'Le type de réduction est obligatoire.',
-            'type_reduction.in'            => 'Le type doit être "pourcentage" ou "fixe".',
-            'valeur.required'              => 'La valeur est obligatoire.',
-            'valeur.numeric'               => 'La valeur doit être un nombre.',
-            'date_fin.after_or_equal'      => 'La date de fin doit être après la date de début.',
-        ]);
+        Promo::create($this->valider($request) + ['agence_id' => $this->compagnieId(), 'utilisations_count' => 0]);
 
-        // Normaliser le code en majuscules
-        $validated['code']  = strtoupper(trim($validated['code']));
-        $validated['actif'] = $request->boolean('actif');
-
-        Promo::create($validated);
-
-        return redirect()
-            ->route('canadian.promos.index')
-            ->with('success', 'Code promo créé avec succès.');
+        return redirect()->route('canadian.promos.index')->with('success', 'Code promo créé.');
     }
 
-    /**
-     * Formulaire d'édition.
-     */
     public function edit($id)
     {
-        $promo = Promo::findOrFail($id);
-        return view('admin.canadian.promos.edit', compact('promo'));
+        return view('admin.canadian.promos.edit', ['promo' => $this->promo($id)]);
     }
 
-    /**
-     * Mise à jour.
-     */
     public function update(Request $request, $id)
     {
-        $promo = Promo::findOrFail($id);
+        $promo = $this->promo($id);
+        $promo->update($this->valider($request, $promo));
 
-        $validated = $request->validate([
-            'code'               => 'required|string|max:50|unique:promos,code,' . $id,
-            'type_reduction'     => 'required|in:pourcentage,fixe',
-            'valeur'             => 'required|numeric|min:0',
-            'date_debut'         => 'nullable|date',
-            'date_fin'           => 'nullable|date|after_or_equal:date_debut',
-            'limite_utilisation' => 'nullable|integer|min:1',
-            'actif'              => 'boolean',
-        ]);
-
-        $validated['code']  = strtoupper(trim($validated['code']));
-        $validated['actif'] = $request->boolean('actif');
-
-        $promo->update($validated);
-
-        return redirect()
-            ->route('canadian.promos.index')
-            ->with('success', 'Code promo modifié avec succès.');
+        return redirect()->route('canadian.promos.index')->with('success', "Code {$promo->code} modifié.");
     }
 
-    /**
-     * ⭐ Active / Désactive un code promo.
-     */
     public function toggle($id)
     {
-        $promo = Promo::findOrFail($id);
-        $promo->actif = !$promo->actif;
-        $promo->save();
+        $promo = $this->promo($id);
+        $promo->update(['actif' => ! $promo->actif]);
 
-        $etat = $promo->actif ? 'activé' : 'désactivé';
-
-        return redirect()
-            ->back()
-            ->with('success', "Code promo {$promo->code} {$etat}.");
+        return back()->with('success', "Code {$promo->code} " . ($promo->actif ? 'activé.' : 'désactivé.'));
     }
 
-    /**
-     * Suppression.
-     */
     public function destroy($id)
     {
-        $promo = Promo::findOrFail($id);
-        $promo->delete();
+        $this->promo($id)->delete();
 
-        return redirect()
-            ->route('canadian.promos.index')
-            ->with('success', 'Code promo supprimé.');
+        return redirect()->route('canadian.promos.index')->with('success', 'Code promo supprimé.');
+    }
+
+    private function promo($id): Promo
+    {
+        return Promo::deLaCompagnie($this->compagnieId())->findOrFail($id);
+    }
+
+    private function valider(Request $request, ?Promo $promo = null): array
+    {
+        $request->merge(['code' => strtoupper(preg_replace('/\s+/', '', (string) $request->code))]);
+
+        $v = $request->validate([
+            'code'            => ['required', 'string', 'min:3', 'max:30', 'regex:/^[A-Z0-9_-]+$/',
+                Rule::unique('promos', 'code')->where('agence_id', $this->compagnieId())->whereNull('deleted_at')->ignore($promo?->id)],
+            'type'            => 'required|in:pourcentage,fixe',
+            'valeur'          => ['required', 'numeric', 'min:1', $request->type === 'pourcentage' ? 'max:90' : 'max:10000000'],
+            'date_debut'      => 'required|date',
+            'date_fin'        => 'required|date|after_or_equal:date_debut',
+            'utilisation_max' => 'nullable|integer|min:1',
+        ], [
+            'code.regex'              => 'Le code ne contient que des lettres, chiffres, tirets.',
+            'code.unique'             => 'Ce code existe déjà dans votre compagnie.',
+            'valeur.max'              => $request->type === 'pourcentage' ? 'Une réduction ne peut pas dépasser 90 %.' : 'Montant trop élevé.',
+            'date_fin.after_or_equal' => 'La date de fin doit être après la date de début.',
+        ]);
+        $v['actif'] = $request->boolean('actif');
+
+        return $v;
     }
 }

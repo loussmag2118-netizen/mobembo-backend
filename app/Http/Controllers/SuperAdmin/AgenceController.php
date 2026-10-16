@@ -18,12 +18,15 @@ class AgenceController extends Controller
     /**
      * Afficher la liste de TOUTES les agences et leurs informations globales.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $type = in_array($request->query('type'), [Agence::BUS, Agence::AERIEN], true) ? $request->query('type') : null;
+
         $agences = Agence::with(['admin', 'logoMedia'])
             ->withCount(['utilisateurs as agents_count' => function($query) {
                 $query->where('role', 'Agent');
-            }, 'bus'])
+            }, 'bus', 'vols'])
+            ->when($type, fn ($q) => $q->where('type_transport', $type))
             ->orderBy('id', 'desc')
             ->paginate(5)->withQueryString();
 
@@ -38,7 +41,8 @@ class AgenceController extends Controller
             'totalAgences',
             'agencesActives',
             'totalAgents',
-            'totalBus'
+            'totalBus',
+            'type'
         ));
     }
 
@@ -50,6 +54,7 @@ class AgenceController extends Controller
     {
         $request->validate([
             'nom_agence'       => 'required|string|max:100|unique:agences,nom_agence',
+            'type_transport'   => 'nullable|in:bus,aerien',
             'date_partenariat' => 'required|date',
             // Liste de règles : le « | » de l'expression ne doit pas séparer les règles
             'admin_telephone'  => ['required', 'string', 'regex:/^(05|06)\d{7}$/', 'unique:utilisateurs,telephone'],
@@ -64,7 +69,7 @@ class AgenceController extends Controller
             'couleur.regex'            => 'La couleur doit être au format #RRGGBB.',
             'couleur_secondaire.regex' => 'La couleur doit être au format #RRGGBB.',
             'logo.max'                 => 'Le logo ne doit pas dépasser 2 Mo.',
-            'nom_agence.unique'        => 'Une agence avec ce nom existe déjà.',
+            'nom_agence.unique'        => 'Un partenaire avec ce nom existe déjà.',
             'admin_telephone.unique'   => 'Ce numéro de téléphone est déjà utilisé.',
             'admin_telephone.regex'    => 'Le numéro doit commencer par 05 ou 06 et avoir 9 chiffres.',
             'admin_password.min'       => 'Le mot de passe doit avoir au moins 8 caractères.',
@@ -73,6 +78,7 @@ class AgenceController extends Controller
         $agence = DB::transaction(function () use ($request) {
             $agence = Agence::create([
                 'nom_agence'       => $request->nom_agence,
+                'type_transport'   => $request->input('type_transport', Agence::BUS),
                 'statut'           => 'Actif',
                 'date_partenariat' => $request->date_partenariat,
                 'superadmin_id'    => Auth::id(),
@@ -89,11 +95,11 @@ class AgenceController extends Controller
             return $agence;
         });
 
-        Audit::log('superadmin.agence.creee', $agence, ['nom' => $agence->nom_agence, 'admin' => $request->admin_telephone]);
+        Audit::log('superadmin.agence.creee', $agence, ['nom' => $agence->nom_agence, 'type' => $agence->type_transport, 'admin' => $request->admin_telephone]);
 
         return redirect()
             ->route('superadmin.agences.index')
-            ->with('success', "Agence « {$agence->nom_agence} » créée avec succès. Le compte Admin a été configuré.");
+            ->with('success', ($agence->estAerien() ? 'Compagnie aérienne' : 'Agence') . " « {$agence->nom_agence} » créée avec succès. Le compte Admin a été configuré.");
     }
 
     /**
@@ -103,7 +109,8 @@ class AgenceController extends Controller
     {
         $agence->loadCount([
             'utilisateurs as agents_count' => fn ($q) => $q->where('role', 'Agent'),
-            'bus', 'gares', 'trajets',
+            'bus', 'gares', 'trajets', 'vols', 'flottes',
+            'reservationsVols as reservations_payees_count' => fn ($q) => $q->whereIn('statut', ['Paye', 'Confirmee']),
         ]);
         $admins = Utilisateur::where('agence_id', $agence->id)->where('role', 'Admin')->orderBy('nom')->get();
 
@@ -118,9 +125,14 @@ class AgenceController extends Controller
         $donnees = $request->validate([
             'nom_agence'       => ['required', 'string', 'max:100', Rule::unique('agences', 'nom_agence')->ignore($agence->id)],
             'date_partenariat' => 'required|date',
-            'age_max_enfant'   => 'required|integer|min:1|max:17',
+            // Réglages propres au bus
+            'age_max_enfant'   => [$agence->estAerien() ? 'nullable' : 'required', 'integer', 'min:1', 'max:17'],
         ]);
-        $donnees['choix_siege'] = $request->boolean('choix_siege');
+        if ($agence->estAerien()) {
+            unset($donnees['age_max_enfant']);
+        } else {
+            $donnees['choix_siege'] = $request->boolean('choix_siege');
+        }
 
         $avant = $agence->only(array_keys($donnees));
         $agence->update($donnees);

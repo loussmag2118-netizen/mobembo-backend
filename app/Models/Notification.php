@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AppartientACompagnie;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Notification extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, AppartientACompagnie;
 
     protected $table = 'notifications';
 
     protected $fillable = [
+        'agence_id',
         'canadian_user_id',
         'utilisateur_id',
         'titre',

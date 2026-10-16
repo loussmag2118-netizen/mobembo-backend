@@ -2,422 +2,274 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ReservationImpossibleException;
 use App\Http\Controllers\Controller;
 use App\Models\Extra;
-use App\Models\Vol;
-use App\Models\Reservation;
 use App\Models\Notification;
-use App\Models\Paiement;
+use App\Models\Reservation;
+use App\Models\Vol;
+use App\Services\ReservationVolService;
+use App\Support\Audit;
+use App\Support\FormatVol;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-use Throwable;
 
+/**
+ * API des clients de l'application aérienne : vols de toutes les
+ * compagnies aériennes actives, réservations, notifications, profil.
+ * Le paiement est géré par PaiementVolController.
+ */
 class CanadianClientController extends Controller
 {
-    // ═══════════════════════════════════════════════════════════════
-    // VILLES + VOLS (accueil)
-    // ═══════════════════════════════════════════════════════════════
-    public function villesVols()
+    public function __construct(private ReservationVolService $reservations)
     {
-        try {
-            $departs  = Vol::distinct()->pluck('ville_depart')->filter();
-            $arrivees = Vol::distinct()->pluck('ville_arrivee')->filter();
-
-            $villes = $departs->merge($arrivees)
-                ->unique()
-                ->sort()
-                ->values();
-
-            $vols = Vol::whereIn('statut', ['programme', 'en_vol'])
-                ->orderBy('date_depart')
-                ->limit(20)
-                ->get()
-                ->map(fn ($v) => $this->formatVol($v))
-                ->values();
-
-            return response()->json([
-                'success' => true,
-                'villes'  => $villes,
-                'vols'    => $vols,
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-                'villes'  => [],
-                'vols'    => [],
-            ], 200);
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // RECHERCHE DE VOLS
-    // POST /api/canadian/recherche-vols
+    // VOLS
     // ═══════════════════════════════════════════════════════════════
+
+    /** GET /api/canadian/villes-vols : villes desservies et prochains vols */
+    public function villesVols()
+    {
+        $tous = Vol::enVente()->get(['ville_depart', 'ville_arrivee']);
+
+        $vols = Vol::enVente()->with('partenaire.logoMedia')
+            ->where('places_disponibles', '>', 0)
+            ->orderBy('date_depart')
+            ->limit(20)
+            ->get()
+            ->map(fn ($v) => FormatVol::pourMobile($v))
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'villes'  => $tous->pluck('ville_depart')->merge($tous->pluck('ville_arrivee'))->filter()->unique()->sort()->values(),
+            'vols'    => $vols,
+        ]);
+    }
+
+    /** POST /api/canadian/recherche-vols */
     public function rechercheVols(Request $request)
     {
-        $villeDepart  = $request->input('ville_depart',
-                            $request->input('depart',
-                                $request->input('origine', '')));
+        $donnees = [
+            'ville_depart'  => $request->input('ville_depart', $request->input('depart', $request->input('origine', ''))),
+            'ville_arrivee' => $request->input('ville_arrivee', $request->input('arrivee', $request->input('destination', ''))),
+            'date_depart'   => $request->input('date_depart', $request->input('date')),
+        ];
 
-        $villeArrivee = $request->input('ville_arrivee',
-                            $request->input('arrivee',
-                                $request->input('destination', '')));
-
-        $dateDepart   = $request->input('date_depart',
-                            $request->input('date', null));
-
-        $validator = Validator::make([
-            'ville_depart'  => $villeDepart,
-            'ville_arrivee' => $villeArrivee,
-            'date_depart'   => $dateDepart,
-        ], [
-            'ville_depart'  => 'required|string',
-            'ville_arrivee' => 'required|string',
+        $validator = Validator::make($donnees, [
+            'ville_depart'  => 'required|string|max:100',
+            'ville_arrivee' => 'required|string|max:100',
             'date_depart'   => 'nullable|date',
         ], [
             'ville_depart.required'  => 'La ville de départ est obligatoire.',
             'ville_arrivee.required' => 'La ville d\'arrivée est obligatoire.',
             'date_depart.date'       => 'La date de départ est invalide.',
         ]);
-
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'vols'    => [],
-            ], 422);
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'vols' => []], 422);
         }
 
-        try {
-            $query = Vol::where('ville_depart', $villeDepart)
-                ->where('ville_arrivee', $villeArrivee)
-                ->whereIn('statut', ['programme', 'en_vol']);
-
-            if (!empty($dateDepart)) {
-                $query->whereDate('date_depart', $dateDepart);
-            }
-
-            $vols = $query->orderBy('date_depart')
-                ->get()
-                ->map(fn ($v) => $this->formatVol($v))
-                ->values();
-
-            return response()->json([
-                'success' => true,
-                'vols'    => $vols,
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-                'vols'    => [],
-            ], 200);
+        $query = Vol::enVente()->with('partenaire.logoMedia')
+            ->where('ville_depart', $donnees['ville_depart'])
+            ->where('ville_arrivee', $donnees['ville_arrivee']);
+        if (! empty($donnees['date_depart'])) {
+            $query->whereDate('date_depart', $donnees['date_depart']);
         }
+
+        return response()->json([
+            'success' => true,
+            'vols'    => $query->orderBy('date_depart')->get()->map(fn ($v) => FormatVol::pourMobile($v))->values(),
+        ]);
+    }
+
+    /** GET /api/canadian/extras?vol_id= : options proposées par la compagnie du vol */
+    public function listExtras(Request $request)
+    {
+        $agenceId = $request->filled('vol_id')
+            ? Vol::whereKey($request->integer('vol_id'))->value('agence_id')
+            : null;
+
+        $extras = Extra::where('actif', true)
+            ->when($agenceId, fn ($q) => $q->where('agence_id', $agenceId))
+            ->orderBy('ordre')
+            ->get()
+            ->map(fn ($e) => [
+                'id'           => $e->id,
+                'compagnie_id' => $e->agence_id,
+                'code'         => $e->code,
+                'nom'          => $e->nom,
+                'description'  => $e->description,
+                'categorie'    => $e->categorie,
+                'prix'         => (float) ($e->prix ?? 0),
+                'icone'        => $e->icone,
+            ])
+            ->values();
+
+        return response()->json(['success' => true, 'extras' => $extras]);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // CRÉER UNE RÉSERVATION
-    // POST /api/canadian/reservations
+    // RÉSERVATIONS
     // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * POST /api/canadian/reservations
+     * Bloque les places pendant le délai de paiement (15 minutes).
+     */
     public function creerReservation(Request $request)
     {
-        $nombrePlaces = $request->input('nombre_places',
-                            $request->input('nb_places',
-                                $request->input('nb_passagers', null)));
-
         $passagers = $request->input('passagers', []);
-
-        if ($nombrePlaces === null) {
-            $nombrePlaces = is_array($passagers) ? count($passagers) : 1;
-        }
-
-        $nombrePlaces = (int) $nombrePlaces;
+        $nombrePlaces = (int) $request->input('nombre_places', $request->input('nb_places',
+            $request->input('nb_passagers', is_array($passagers) && $passagers ? count($passagers) : 1)));
 
         $validator = Validator::make([
             'vol_id'        => $request->input('vol_id', $request->input('volId')),
             'nombre_places' => $nombrePlaces,
+            'passagers'     => $passagers,
         ], [
-            'vol_id'        => 'required|exists:vols,id',
-            'nombre_places' => 'required|integer|min:1',
+            'vol_id'        => 'required|integer|exists:vols,id',
+            'nombre_places' => 'required|integer|min:1|max:9',
+            'passagers'     => 'nullable|array|max:9',
         ], [
-            'vol_id.required'        => 'Le vol est obligatoire.',
-            'vol_id.exists'          => 'Le vol sélectionné n\'existe pas.',
-            'nombre_places.required' => 'Le nombre de places est obligatoire.',
-            'nombre_places.integer'  => 'Le nombre de places doit être un nombre entier.',
-            'nombre_places.min'      => 'Il faut au moins 1 place.',
+            'vol_id.required'   => 'Le vol est obligatoire.',
+            'vol_id.exists'     => 'Le vol sélectionné n\'existe pas.',
+            'nombre_places.min' => 'Il faut au moins 1 place.',
+            'nombre_places.max' => 'Une réservation est limitée à 9 passagers.',
         ]);
-
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
         }
 
-        $vol = Vol::findOrFail($request->input('vol_id', $request->input('volId')));
+        try {
+            $reservation = $this->reservations->reserver(
+                $request->user(),
+                (int) $request->input('vol_id', $request->input('volId')),
+                $nombrePlaces,
+                is_array($passagers) ? $passagers : [],
+            );
+        } catch (ReservationImpossibleException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], $e->statutHttp());
+        }
 
-        if ($vol->places_disponibles < $nombrePlaces) {
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Places réservées : finalisez le paiement dans les ' . ReservationVolService::DELAI_MINUTES . ' minutes.',
+            'reservation' => $this->presenter($reservation->load('vol.partenaire')),
+            'reference'   => $reservation->reference,
+        ], 201);
+    }
+
+    /** GET /api/canadian/mes-reservations */
+    public function mesReservations(Request $request)
+    {
+        $this->reservations->expirer();
+
+        $reservations = Reservation::with('vol.partenaire.logoMedia')
+            ->where('canadian_user_id', $request->user()->id)
+            ->latest()
+            ->get()
+            ->map(fn ($r) => $this->presenter($r))
+            ->values();
+
+        return response()->json(['success' => true, 'reservations' => $reservations]);
+    }
+
+    /** GET /api/canadian/reservations/{id} */
+    public function showReservation(Request $request, $id)
+    {
+        $reservation = $this->reservationDuClient($request, $id);
+        if (! $reservation) {
+            return response()->json(['success' => false, 'message' => 'Réservation introuvable.'], 404);
+        }
+
+        return response()->json(['success' => true, 'reservation' => $this->presenter($reservation, true)]);
+    }
+
+    /** POST /api/canadian/reservations/{id}/annuler : le client renonce avant de payer */
+    public function annulerReservation(Request $request, $id)
+    {
+        $reservation = $this->reservationDuClient($request, $id);
+        if (! $reservation) {
+            return response()->json(['success' => false, 'message' => 'Réservation introuvable.'], 404);
+        }
+        if ($reservation->statut !== 'En_Attente') {
             return response()->json([
                 'success' => false,
-                'message' => 'Plus assez de places disponibles.',
+                'message' => 'Seule une réservation non payée peut être annulée ici. Pour une réservation payée, contactez la compagnie.',
             ], 409);
         }
 
-        DB::beginTransaction();
-        try {
-            $reference    = 'RES-' . date('Ymd') . '-' . strtoupper(Str::random(6));
-            $montantTotal = $vol->prix * $nombrePlaces;
-
-            $reservation = Reservation::create([
-                // ⚠️ Contournement temporaire : user_id est obligatoire en base.
-                // À retirer une fois la migration 'make_user_id_nullable' exécutée.
-                'user_id'          => $request->user()->id,
-                'canadian_user_id' => $request->user()->id,
-                'vol_id'           => $vol->id,
-                'nombre_places'    => $nombrePlaces,
-                'montant_total'    => $montantTotal,
-                'statut'           => 'En_Attente',
-                'reference'        => $reference,
-                'type_reservation' => 'aller_simple',
-                'classe'           => 'economique',
-                'prix_billet'      => $vol->prix,
-                'prix_extras'      => 0,
-            ]);
-
-            $vol->decrement('places_disponibles', $nombrePlaces);
-
-            Notification::create([
-                'canadian_user_id' => $request->user()->id,
-                'utilisateur_id'   => null,
-                'titre'            => 'Réservation créée',
-                'message'          => "Votre réservation #{$reservation->id} a été enregistrée.",
-                'type'             => 'success',
-                'lu'               => false,
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success'     => true,
-                'message'     => 'Réservation créée avec succès.',
-                'reservation' => $reservation->load('vol'),
-                'reference'   => $reference,
-            ], 201);
-        } catch (Throwable $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-            ], 500);
+        // Un paiement peut avoir été validé sur le téléphone entre-temps
+        if ($reservation->reference_paiement) {
+            app(PaiementVolController::class)->actualiser($reservation);
+            $reservation->refresh();
+            if ($reservation->statut !== 'En_Attente') {
+                return response()->json(['success' => false, 'message' => 'Le paiement de cette réservation vient d\'être validé : elle ne peut plus être annulée ici.'], 409);
+            }
         }
+
+        $this->reservations->liberer($reservation, 'Annulee');
+        Audit::log('reservation.annulee_client', $reservation, ['reference' => $reservation->reference], $reservation->agence_id);
+
+        return response()->json(['success' => true, 'message' => 'Réservation annulée.', 'reservation' => $this->presenter($reservation->fresh(['vol.partenaire']))]);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // MES RÉSERVATIONS
-    // GET /api/canadian/mes-reservations
-    // ═══════════════════════════════════════════════════════════════
-    public function mesReservations(Request $request)
+    /** GET /api/canadian/reservations/{id}/billet : billet électronique (réservation payée) */
+    public function billet(Request $request, $id)
     {
-        try {
-            $user = $request->user();
-
-            $reservations = Reservation::with('vol')
-                ->where('canadian_user_id', $user->id)
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(function ($r) {
-                    $montantTotal = (float) ($r->montant_total ?? 0);
-
-                    return [
-                        'id'               => $r->id,
-                        'reference'        => $r->reference ?? ('R-' . str_pad($r->id, 6, '0', STR_PAD_LEFT)),
-                        'code_reservation' => $r->reference ?? ('R-' . str_pad($r->id, 6, '0', STR_PAD_LEFT)),
-                        'codeReservation'  => $r->reference ?? ('R-' . str_pad($r->id, 6, '0', STR_PAD_LEFT)),
-                        'code_pnr'         => $r->code_pnr,
-                        'vol_id'           => $r->vol_id,
-                        'nombre_places'    => (int) $r->nombre_places,
-                        'prix_total'       => $montantTotal,
-                        'montant_total'    => $montantTotal,
-                        'statut'           => $r->statut,
-                        'date_reservation' => $r->created_at ? $r->created_at->toIso8601String() : null,
-                        'vol'              => $r->vol ? $this->formatVol($r->vol) : null,
-                    ];
-                })
-                ->values();
-
-            return response()->json([
-                'success'      => true,
-                'reservations' => $reservations,
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success'      => false,
-                'message'      => 'Erreur : ' . $e->getMessage(),
-                'reservations' => [],
-            ], 200);
+        $reservation = $this->reservationDuClient($request, $id);
+        if (! $reservation) {
+            return response()->json(['success' => false, 'message' => 'Réservation introuvable.'], 404);
         }
+        if (! in_array($reservation->statut, ['Paye', 'Confirmee'], true)) {
+            return response()->json(['success' => false, 'message' => 'Le billet est disponible une fois le paiement confirmé.'], 409);
+        }
+
+        return response()->json(['success' => true, 'billet' => $this->presenter($reservation, true)]);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // INITIER UN PAIEMENT  (⭐ CORRIGÉ POUR LA VRAIE TABLE paiements)
-    // POST /api/canadian/paiements/initier
+    // NOTIFICATIONS
     // ═══════════════════════════════════════════════════════════════
-    public function initierPaiement(Request $request)
-    {
-        $reservationId = $request->input('reservation_id',
-                            $request->input('reservationId', null));
 
-        $methode = $request->input('methode',
-                        $request->input('methode_paiement', 'mtn_momo'));
-
-        // ⭐ Mapping des méthodes Flutter → valeurs Admin
-        $methodeMap = [
-            'mtn_momo'     => 'MTN',
-            'airtel_money' => 'Airtel',
-            'carte'        => 'Especes',
-            'mobile_money' => 'MTN',
-            'virement'     => 'Especes',
-        ];
-        $methodeAdmin = $methodeMap[$methode] ?? 'MTN';
-
-        $validator = Validator::make([
-            'reservation_id' => $reservationId,
-        ], [
-            'reservation_id' => 'required|exists:reservations,id',
-        ], [
-            'reservation_id.required' => 'La réservation est obligatoire.',
-            'reservation_id.exists'   => 'La réservation n\'existe pas.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
-        }
-
-        $reservation = Reservation::with('vol')
-            ->where('id', $reservationId)
-            ->where('canadian_user_id', $request->user()->id)
-            ->first();
-
-        if (!$reservation) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Réservation introuvable.',
-            ], 404);
-        }
-
-        DB::beginTransaction();
-        try {
-            $user      = $request->user();
-            $reference = 'PAY-' . strtoupper(uniqid());
-            $montant   = (float) ($reservation->montant_total ?? 0);
-            $nomClient = trim(($user->nom ?? '') . ' ' . ($user->prenom ?? ''));
-
-            // ⭐ 1. Créer le paiement (vraie structure de ta table)
-            Paiement::create([
-                'reservation_id'       => $reservation->id,
-                'user_id'              => $user->id,
-                'reference'            => $reference,
-                'montant'              => $montant,
-                'devise'               => 'XAF',
-                'mode_paiement'        => $methodeAdmin,
-                'telephone_paiement'   => $user->telephone ?? '',
-                'statut'               => 'Reussi',
-                'date_paiement'        => now(),
-                'details'              => [
-                    'nom_client'   => $nomClient,
-                    'vol_numero'   => $reservation->vol->numero_vol ?? null,
-                    'nombre_places'=> $reservation->nombre_places,
-                ],
-            ]);
-
-            // ⭐ 2. Mettre à jour la réservation
-            $reservation->update([
-                'statut'             => 'Paye',
-                'date_paiement'      => now(),
-                'methode_paiement'   => $methodeAdmin,
-                'reference_paiement' => $reference,
-                'code_reservation'   => 'BK-' . str_pad($reservation->id, 6, '0', STR_PAD_LEFT),
-                'code_pnr'           => strtoupper(Str::random(6)),
-            ]);
-
-            // ⭐ 3. Notification client
-            Notification::create([
-                'canadian_user_id' => $user->id,
-                'utilisateur_id'   => null,
-                'titre'            => 'Paiement confirmé',
-                'message'          => "Votre paiement de {$montant} FCFA a été confirmé. Référence : {$reference}",
-                'type'             => 'success',
-                'lu'               => false,
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success'        => true,
-                'message'        => 'Paiement effectué avec succès.',
-                'reference'      => $reference,
-                'montant'        => $montant,
-                'reservation_id' => $reservation->id,
-                'methode'        => $methodeAdmin,
-            ], 200);
-
-        } catch (Throwable $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // MES NOTIFICATIONS
-    // ═══════════════════════════════════════════════════════════════
     public function notifications(Request $request)
     {
-        try {
-            $user = $request->user();
+        $notifs = Notification::where('canadian_user_id', $request->user()->id)
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn ($n) => [
+                'id'      => $n->id,
+                'titre'   => $n->titre ?? 'Notification',
+                'message' => $n->message ?? '',
+                'type'    => $n->type ?? 'info',
+                'date'    => $n->created_at ? Carbon::parse($n->created_at)->locale('fr')->diffForHumans() : '',
+                'lu'      => (bool) $n->lu,
+            ])
+            ->values();
 
-            $notifs = Notification::where('canadian_user_id', $user->id)
-                ->orderByDesc('created_at')
-                ->limit(50)
-                ->get()
-                ->map(function ($n) {
-                    return [
-                        'id'      => $n->id,
-                        'titre'   => $n->titre ?? 'Notification',
-                        'message' => $n->message ?? '',
-                        'type'    => $n->type ?? 'info',
-                        'date'    => $n->created_at
-                            ? Carbon::parse($n->created_at)->diffForHumans()
-                            : '',
-                        'lu'      => (bool) ($n->lu ?? false),
-                    ];
-                })
-                ->values();
+        return response()->json(['success' => true, 'notifications' => $notifs]);
+    }
 
-            return response()->json([
-                'success'       => true,
-                'notifications' => $notifs,
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success'       => true,
-                'notifications' => [],
-            ], 200);
-        }
+    public function marquerNotificationLue(Request $request, $id)
+    {
+        $modifiees = Notification::where('id', $id)
+            ->where('canadian_user_id', $request->user()->id)
+            ->update(['lu' => true]);
+
+        return $modifiees
+            ? response()->json(['success' => true, 'message' => 'Notification marquée comme lue.'])
+            : response()->json(['success' => false, 'message' => 'Notification introuvable.'], 404);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PROFIL
+    // PROFIL ET COMPTE
     // ═══════════════════════════════════════════════════════════════
+
     public function profile(Request $request)
     {
         $user = $request->user();
@@ -428,26 +280,20 @@ class CanadianClientController extends Controller
                 'id'              => $user->id,
                 'nom'             => $user->nom ?? $user->name,
                 'prenom'          => $user->prenom ?? '',
-                'email'           => $user->email,
+                'email'           => str_ends_with((string) $user->email, '@canadian.local') ? null : $user->email,
                 'telephone'       => $user->telephone,
-                'compte_confirme' => (bool) ($user->compte_confirme ?? false),
+                'compte_confirme' => (bool) $user->compte_confirme,
             ],
-        ], 200);
+        ]);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // LOGOUT
-    // ═══════════════════════════════════════════════════════════════
-    /**
-     * Suppression du compte par le client lui-même (mot de passe redemandé).
-     * DELETE /api/canadian/compte
-     */
+    /** DELETE /api/canadian/compte : suppression par le client (mot de passe redemandé) */
     public function supprimerCompte(Request $request)
     {
         $user = $request->user();
         $request->validate(['mot_de_passe' => 'required|string'], ['mot_de_passe.required' => 'Saisissez votre mot de passe pour confirmer.']);
 
-        if (! \Illuminate\Support\Facades\Hash::check($request->mot_de_passe, $user->password)) {
+        if (! Hash::check($request->mot_de_passe, $user->password)) {
             return response()->json(['message' => 'Mot de passe incorrect.'], 422);
         }
 
@@ -460,176 +306,68 @@ class CanadianClientController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Déconnexion réussie.',
-        ], 200);
+        return response()->json(['success' => true, 'message' => 'Déconnexion réussie.']);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ⭐ DÉTAIL D'UNE RÉSERVATION
-    // GET /api/canadian/reservations/{id}
-    // ═══════════════════════════════════════════════════════════════
-    public function showReservation(Request $request, $id)
+
+    private function reservationDuClient(Request $request, $id): ?Reservation
     {
-        try {
-            $reservation = Reservation::with('vol')
-                ->where('id', $id)
-                ->where('canadian_user_id', $request->user()->id)
-                ->first();
+        $this->reservations->expirer();
 
-            if (!$reservation) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Réservation introuvable.',
-                ], 404);
-            }
-
-            return response()->json([
-                'success'     => true,
-                'reservation' => [
-                    'id'               => $reservation->id,
-                    'reference'        => $reservation->reference ?? ('R-' . str_pad($reservation->id, 6, '0', STR_PAD_LEFT)),
-                    'code_pnr'         => $reservation->code_pnr,
-                    'nombre_places'    => (int) $reservation->nombre_places,
-                    'montant_total'    => (float) ($reservation->montant_total ?? 0),
-                    'statut'           => $reservation->statut,
-                    'date_reservation' => $reservation->created_at ? $reservation->created_at->toIso8601String() : null,
-                    'vol'              => $reservation->vol ? $this->formatVol($reservation->vol) : null,
-                ],
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-            ], 500);
-        }
+        return Reservation::with(['vol.partenaire.logoMedia', 'passagers'])
+            ->where('id', $id)
+            ->where('canadian_user_id', $request->user()->id)
+            ->first();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ⭐ LISTE DES EXTRAS DISPONIBLES
-    // GET /api/canadian/extras
-    // ═══════════════════════════════════════════════════════════════
-    public function listExtras(Request $request)
+    /** Réservation telle que l'application l'affiche. */
+    private function presenter(Reservation $r, bool $detail = false): array
     {
-        try {
-            $extras = Extra::orderBy('ordre')
-                ->get()
-                ->map(fn($e) => [
-                    'id'          => $e->id,
-                    'nom'         => $e->nom,
-                    'description' => $e->description,
-                    'prix'        => (float) ($e->prix ?? 0),
-                    'icone'       => $e->icone,
-                ])
-                ->values();
+        $paye = in_array($r->statut, ['Paye', 'Confirmee'], true);
+        $reference = $r->reference ?? ('R-' . str_pad($r->id, 6, '0', STR_PAD_LEFT));
 
-            return response()->json([
-                'success' => true,
-                'extras'  => $extras,
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'extras'  => [],
-                'message' => 'Erreur : ' . $e->getMessage(),
-            ], 200);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ⭐ MARQUER UNE NOTIFICATION COMME LUE
-    // PATCH /api/canadian/notifications/{id}/lu
-    // ═══════════════════════════════════════════════════════════════
-    public function marquerNotificationLue(Request $request, $id)
-    {
-        try {
-            $notif = Notification::where('id', $id)
-                ->where('canadian_user_id', $request->user()->id)
-                ->first();
-
-            if (!$notif) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Notification introuvable.',
-                ], 404);
-            }
-
-            $notif->update(['lu' => true]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Notification marquée comme lue.',
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ⭐ FORMATAGE D'UN VOL POUR FLUTTER
-    // ═══════════════════════════════════════════════════════════════
-    private function formatVol($vol): array
-    {
-        if (!$vol || !is_object($vol)) {
-            return [];
-        }
-
-        $dateDepart  = !empty($vol->date_depart)  ? Carbon::parse($vol->date_depart)  : null;
-        $dateArrivee = !empty($vol->date_arrivee) ? Carbon::parse($vol->date_arrivee) : null;
-
-        $duree = '';
-        if ($dateDepart && $dateArrivee) {
-            $diff   = $dateDepart->diff($dateArrivee);
-            $heures = $diff->h + ($diff->d * 24);
-            $duree  = sprintf('%dh%02d', $heures, $diff->i);
-        }
-
-        $dateFr = $dateDepart
-            ? $dateDepart->locale('fr')->isoFormat('dddd D MMMM YYYY')
-            : '';
-
-        return [
-            'id'                 => $vol->id ?? null,
-            'numero_vol'         => $vol->numero_vol ?? '',
-            'numeroVol'          => $vol->numero_vol ?? '',
-
-            'ville_depart'       => $vol->ville_depart ?? '',
-            'villeDepart'        => $vol->ville_depart ?? ($vol->origine ?? ''),
-            'ville_arrivee'      => $vol->ville_arrivee ?? '',
-            'villeArrivee'       => $vol->ville_arrivee ?? ($vol->destination ?? ''),
-
-            'origine'            => $vol->origine ?? '',
-            'destination'        => $vol->destination ?? '',
-
-            'heure_depart'       => $dateDepart  ? $dateDepart->format('H:i')  : '',
-            'heureDepart'        => $dateDepart  ? $dateDepart->format('H:i')  : '',
-            'heure_arrivee'      => $dateArrivee ? $dateArrivee->format('H:i') : '',
-            'heureArrivee'       => $dateArrivee ? $dateArrivee->format('H:i') : '',
-
-            'date_depart'        => $dateDepart  ? $dateDepart->format('Y-m-d H:i:s')  : null,
-            'date_arrivee'       => $dateArrivee ? $dateArrivee->format('Y-m-d H:i:s') : null,
-            'date_formatee'      => $dateFr,
-            'dateFormatee'       => $dateFr,
-
-            'duree_formatee'     => $duree,
-            'dureeFormatee'      => $duree,
-
-            'prix'               => (float) ($vol->prix ?? 0),
-            'prix_base'          => (float) ($vol->prix ?? 0),
-            'prixBase'           => (float) ($vol->prix ?? 0),
-
-            'places_disponibles' => (int) ($vol->places_disponibles ?? 0),
-            'placesRestantes'    => (int) ($vol->places_disponibles ?? 0),
-
-            'statut'             => $vol->statut ?? 'programme',
-            'type_vol'           => $vol->type_vol ?? 'direct',
-            'typeVol'            => $vol->type_vol ?? 'direct',
-            'compagnie'          => $vol->compagnie ?? 'Canadian Airways',
-            'avion'              => $vol->avion ?? null,
+        $donnees = [
+            'id'               => $r->id,
+            'reference'        => $reference,
+            'code_reservation' => $reference,
+            'codeReservation'  => $reference,
+            // Le PNR n'est communiqué qu'une fois payé
+            'code_pnr'         => $paye ? $r->code_pnr : null,
+            'vol_id'           => $r->vol_id,
+            'nombre_places'    => (int) $r->nombre_places,
+            'prix_total'       => (float) $r->montant_total,
+            'montant_total'    => (float) $r->montant_total,
+            'statut'           => $r->statut,
+            'statut_libelle'   => self::libelleStatut($r->statut),
+            'expire_le'        => $r->statut === 'En_Attente' ? $r->expire_le?->toIso8601String() : null,
+            'date_reservation' => $r->created_at?->toIso8601String(),
+            'date_paiement'    => $r->date_paiement?->toIso8601String(),
+            'methode_paiement' => $r->methode_paiement,
+            'vol'              => $r->vol ? FormatVol::pourMobile($r->vol) : null,
         ];
+
+        if ($detail) {
+            $donnees['passagers'] = $r->passagers->map(fn ($p) => [
+                'nom' => $p->nom, 'prenom' => $p->prenom, 'type' => $p->type,
+            ])->values();
+        }
+
+        return $donnees;
+    }
+
+    public static function libelleStatut(?string $statut): string
+    {
+        return match ($statut) {
+            'En_Attente'   => 'En attente de paiement',
+            'Paye'         => 'Payée',
+            'Confirmee'    => 'Confirmée',
+            'Annulee'      => 'Annulée',
+            'Expiree'      => 'Expirée (non payée)',
+            'Echouee'      => 'Paiement échoué',
+            'A_Rembourser' => 'Remboursement en cours',
+            'Remboursee'   => 'Remboursée',
+            default        => (string) $statut,
+        };
     }
 }

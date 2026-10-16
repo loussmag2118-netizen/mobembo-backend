@@ -1,185 +1,73 @@
 @extends('layouts.admin')
 
+@section('title', 'Tableau de bord')
+@section('header_icon', 'fa-gauge-high')
+@section('header_title', 'Tableau de bord')
+@section('header_subtitle', $compagnie->nom_agence . ' · ' . now()->locale('fr')->isoFormat('dddd D MMMM YYYY'))
+
 @section('content')
-
-<div class="space-y-8">
-
-    {{-- ============================================================ --}}
-    {{-- EN-TÊTE AVEC BIENVENUE                                       --}}
-    {{-- ============================================================ --}}
-    <div class="relative overflow-hidden bg-gradient-to-r from-red-600 to-red-800 rounded-2xl shadow-xl p-8">
-        <!-- Cercles décoratifs -->
-        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-        <div class="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-        
-        <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
-            <div>
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                        <i class="fa-solid fa-plane text-white text-xl"></i>
-                    </div>
-                    <span class="text-xs font-bold text-white/80 uppercase tracking-widest">Canadian Airways</span>
-                </div>
-                <h1 class="text-3xl font-black text-white mb-1">
-                    Bonjour, {{ $user->nom ?? 'Admin' }} 👋
-                </h1>
-                <p class="text-white/80 text-sm">
-                    Bienvenue dans votre tableau de bord administratif
-                </p>
+@php $aFaire = collect($demarrage)->reject(fn ($e) => $e[1]); @endphp
+<div class="space-y-6">
+    <div class="carte-agence relative overflow-hidden rounded-3xl bg-[#124231] text-white p-6 sm:p-8 shadow-sm">
+        <i class="fa-solid fa-plane absolute -right-6 -bottom-10 text-[150px] text-white/10 -rotate-12"></i>
+        <div class="relative flex flex-col sm:flex-row sm:items-center gap-5">
+            <img src="{{ $compagnie->logoPublicUrl() }}" alt="" class="w-16 h-16 rounded-2xl bg-white object-contain p-1.5">
+            <div class="flex-1">
+                <p class="text-xs font-bold uppercase tracking-wider text-white/70">Compagnie aérienne</p>
+                <h2 class="text-2xl font-black">Bonjour {{ auth()->user()->prenom }}</h2>
+                <p class="text-sm text-white/80">{{ $stats['vols_a_venir'] }} vol(s) programmé(s) · {{ $stats['places_mois'] }} place(s) vendue(s) ce mois-ci</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-white/70 uppercase tracking-wider mb-1">Connecté en tant que</p>
-                <p class="text-lg font-bold text-white">{{ $user->email ?? 'admin@canadian.com' }}</p>
-                <span class="inline-flex items-center px-3 py-1 mt-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold text-white">
-                    <span class="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span>
-                    En ligne
-                </span>
-            </div>
+            <a href="{{ route('canadian.vols.create') }}" class="inline-flex items-center justify-center gap-2 bg-white text-slate-900 font-bold text-sm py-2.5 px-5 rounded-xl hover:bg-slate-100"><i class="fa-solid fa-plus"></i> Programmer un vol</a>
         </div>
     </div>
 
-    {{-- ============================================================ --}}
-    {{-- CARTES STATISTIQUES                                          --}}
-    {{-- ============================================================ --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-
-        {{-- Clients --}}
-        <div class="group bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="flex items-start justify-between mb-4">
-                <div class="p-3 bg-gradient-to-br from-sky-500 to-sky-600 rounded-xl shadow-lg shadow-sky-500/30 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-users text-white text-xl"></i>
-                </div>
-                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                    +12%
-                </span>
+    @if($aFaire->isNotEmpty())
+        <div class="bg-amber-50 border border-amber-200 rounded-3xl p-6">
+            <h2 class="text-base font-black text-amber-900 mb-3"><i class="fa-solid fa-list-check mr-1"></i> Pour commencer à vendre</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                @foreach($demarrage as [$etape, $fait, $lien])
+                    <a href="{{ $lien }}" class="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 border {{ $fait ? 'border-emerald-200' : 'border-amber-200 hover:border-amber-300' }}">
+                        <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs {{ $fait ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-700' }}"><i class="fa-solid {{ $fait ? 'fa-check' : 'fa-arrow-right' }}"></i></span>
+                        <span class="text-sm font-bold {{ $fait ? 'text-slate-400 line-through' : 'text-slate-800' }}">{{ $etape }}</span>
+                    </a>
+                @endforeach
             </div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Clients</p>
-            <p class="text-3xl font-black text-slate-900">{{ number_format($totalClients, 0, ',', ' ') }}</p>
-            <p class="text-xs text-slate-400 mt-2">Total enregistré</p>
         </div>
+    @endif
 
-        {{-- Utilisateurs --}}
-        <div class="group bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="flex items-start justify-between mb-4">
-                <div class="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-user text-white text-xl"></i>
-                </div>
-                <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                    +8%
-                </span>
-            </div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Utilisateurs</p>
-            <p class="text-3xl font-black text-slate-900">{{ number_format($totalUtilisateurs, 0, ',', ' ') }}</p>
-            <p class="text-xs text-slate-400 mt-2">Tous rôles confondus</p>
-        </div>
-
-        {{-- Agents --}}
-        <div class="group bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="flex items-start justify-between mb-4">
-                <div class="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-user-tie text-white text-xl"></i>
-                </div>
-                <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
-                    Stable
-                </span>
-            </div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Agents</p>
-            <p class="text-3xl font-black text-slate-900">{{ number_format($totalAgents, 0, ',', ' ') }}</p>
-            <p class="text-xs text-slate-400 mt-2">Actifs et disponibles</p>
-        </div>
-
-        {{-- Admins --}}
-        <div class="group bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="flex items-start justify-between mb-4">
-                <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-user-shield text-white text-xl"></i>
-                </div>
-                <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
-                    Équipe
-                </span>
-            </div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Admins</p>
-            <p class="text-3xl font-black text-slate-900">{{ number_format($totalAdmins, 0, ',', ' ') }}</p>
-            <p class="text-xs text-slate-400 mt-2">Accès complet</p>
-        </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @include('admin.canadian.partials.stat', ['titre' => 'Encaissé aujourd\'hui', 'valeur' => number_format($stats['chiffre_jour'], 0, ',', ' ') . ' F', 'icone' => 'fa-calendar-day', 'teinte' => 'emerald'])
+        @include('admin.canadian.partials.stat', ['titre' => 'Encaissé ce mois', 'valeur' => number_format($stats['chiffre_mois'], 0, ',', ' ') . ' F', 'icone' => 'fa-sack-dollar', 'teinte' => 'sky'])
+        @include('admin.canadian.partials.stat', ['titre' => 'En attente de paiement', 'valeur' => $stats['en_attente'], 'icone' => 'fa-hourglass-half', 'teinte' => 'amber'])
+        @include('admin.canadian.partials.stat', ['titre' => 'À rembourser', 'valeur' => $stats['a_rembourser'], 'icone' => 'fa-rotate-left', 'teinte' => $stats['a_rembourser'] ? 'rose' : 'slate'])
     </div>
 
-    {{-- ============================================================ --}}
-    {{-- ACTIONS RAPIDES                                              --}}
-    {{-- ============================================================ --}}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <div>
-                <h2 class="font-bold text-slate-800">Actions rapides</h2>
-                <p class="text-xs text-slate-500 mt-0.5">Accès direct aux modules principaux</p>
-            </div>
-            <i class="fa-solid fa-bolt text-amber-500"></i>
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between"><h2 class="text-base font-black text-slate-900">Prochains vols</h2><a href="{{ route('canadian.vols.index') }}" class="text-sm font-bold text-[#124231] hover:underline">Tous les vols</a></div>
+            @forelse($prochainsVols as $vol)
+                @php $total = $vol->places_totales ?? $vol->places_disponibles; $vendues = max(0, $total - $vol->places_disponibles); @endphp
+                <a href="{{ route('canadian.vols.show', $vol->id) }}" class="flex items-center gap-4 px-6 py-3.5 border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                    <div class="text-center w-14"><p class="text-lg font-black text-slate-900 leading-none">{{ $vol->date_depart->format('d') }}</p><p class="text-[11px] font-bold uppercase text-slate-400">{{ $vol->date_depart->locale('fr')->isoFormat('MMM') }}</p></div>
+                    <div class="flex-1 min-w-0"><p class="font-bold text-slate-900">{{ $vol->ville_depart }} → {{ $vol->ville_arrivee }}</p><p class="text-xs text-slate-400 font-mono">{{ $vol->numero_vol }} · {{ $vol->date_depart->format('H:i') }}</p></div>
+                    <div class="text-right"><p class="font-black text-slate-900">{{ $vendues }}/{{ $total }}</p><p class="text-[11px] text-slate-400">places vendues</p></div>
+                </a>
+            @empty
+                @include('admin.canadian.partials.vide', ['icone' => 'fa-plane', 'titre' => 'Aucun vol à venir', 'texte' => 'Programmez un vol pour qu\'il apparaisse dans l\'application.'])
+            @endforelse
         </div>
-        <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
 
-            <a href="{{ route('canadian.vols.index') }}"
-               class="group p-5 rounded-xl border border-slate-200 hover:border-red-300 hover:bg-red-50/50 transition-all">
-                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-plane-departure text-lg"></i>
-                </div>
-                <p class="font-bold text-slate-800 text-sm">Vols</p>
-                <p class="text-xs text-slate-500 mt-0.5">Gérer les vols</p>
-            </a>
-
-            <a href="{{ route('canadian.reservations.index') }}"
-               class="group p-5 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all">
-                <div class="w-12 h-12 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-ticket text-lg"></i>
-                </div>
-                <p class="font-bold text-slate-800 text-sm">Réservations</p>
-                <p class="text-xs text-slate-500 mt-0.5">Voir les résas</p>
-            </a>
-
-            <a href="{{ route('canadian.paiements.index') }}"
-               class="group p-5 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all">
-                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-credit-card text-lg"></i>
-                </div>
-                <p class="font-bold text-slate-800 text-sm">Paiements</p>
-                <p class="text-xs text-slate-500 mt-0.5">Transactions</p>
-            </a>
-
-            <a href="{{ route('canadian.rapports.index') }}"
-               class="group p-5 rounded-xl border border-slate-200 hover:border-amber-300 hover:bg-amber-50/50 transition-all">
-                <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-chart-line text-lg"></i>
-                </div>
-                <p class="font-bold text-slate-800 text-sm">Rapports</p>
-                <p class="text-xs text-slate-500 mt-0.5">Statistiques</p>
-            </a>
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between"><h2 class="text-base font-black text-slate-900">Dernières réservations</h2><a href="{{ route('canadian.reservations.index') }}" class="text-sm font-bold text-[#124231] hover:underline">Toutes</a></div>
+            @forelse($dernieres as $r)
+                <a href="{{ route('canadian.reservations.show', $r->id) }}" class="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                    <div class="min-w-0"><p class="font-bold text-slate-900 truncate">{{ $r->nom_passager ?: $r->reference }}</p><p class="text-xs text-slate-400">{{ $r->vol?->numero_vol }} · {{ $r->nombre_places }} place(s) · {{ $r->created_at?->diffForHumans() }}</p></div>
+                    <div class="text-right shrink-0"><p class="font-black text-slate-900">{{ number_format($r->montant_total, 0, ',', ' ') }} F</p>@include('admin.canadian.partials.statut-reservation', ['statut' => $r->statut])</div>
+                </a>
+            @empty
+                @include('admin.canadian.partials.vide', ['icone' => 'fa-ticket', 'titre' => 'Aucune réservation', 'texte' => 'Les réservations de l\'application s\'afficheront ici.'])
+            @endforelse
         </div>
     </div>
-
-    {{-- ============================================================ --}}
-    {{-- INFO SYSTEME                                                 --}}
-    {{-- ============================================================ --}}
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <div class="flex items-start gap-4">
-            <div class="p-3 bg-blue-100 text-blue-600 rounded-xl">
-                <i class="fa-solid fa-circle-info text-xl"></i>
-            </div>
-            <div>
-                <h3 class="font-bold text-slate-800 mb-1">Bienvenue sur Canadian Airways</h3>
-                <p class="text-sm text-slate-600 leading-relaxed">
-                    Votre espace d'administration est prêt. Vous pouvez dès maintenant gérer vos vols, 
-                    consulter les réservations, suivre les paiements et générer des rapports détaillés.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    {{-- ============================================================ --}}
-    {{-- FOOTER                                                       --}}
-    {{-- ============================================================ --}}
-    <div class="text-center text-xs text-slate-400 pt-4">
-        <p>© {{ date('Y') }} Canadian Airways — Tableau de bord administrateur v1.0</p>
-    </div>
-
 </div>
-
 @endsection

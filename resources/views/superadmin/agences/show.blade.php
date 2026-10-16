@@ -3,12 +3,12 @@
 @section('title', $agence->nom_agence)
 @section('header_icon', 'fa-building-shield')
 @section('header_title', $agence->nom_agence)
-@section('header_subtitle', 'Réglages de l’agence et comptes administrateurs')
+@section('header_subtitle', ($agence->estAerien() ? 'Compagnie aérienne' : 'Compagnie de bus') . ' : réglages et comptes administrateurs')
 
 @section('content')
 <div class="space-y-6">
     <a href="{{ route('superadmin.agences.index') }}" class="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900">
-        <i class="fa-solid fa-arrow-left"></i> Toutes les agences
+        <i class="fa-solid fa-arrow-left"></i> Tous les partenaires
     </a>
 
     @include('partials.mot-de-passe-temporaire')
@@ -18,8 +18,13 @@
     @endif
 
     {{-- Chiffres clés --}}
+    @php
+        $chiffresCles = $agence->estAerien()
+            ? [['Statut', $agence->statut], ['Type', 'Aérien'], ['Vols', $agence->vols_count], ['Avions', $agence->flottes_count], ['Réservations payées', $agence->reservations_payees_count]]
+            : [['Statut', $agence->statut], ['Agents', $agence->agents_count], ['Bus', $agence->bus_count], ['Agences', $agence->gares_count], ['Trajets', $agence->trajets_count]];
+    @endphp
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        @foreach([['Statut', $agence->statut], ['Agents', $agence->agents_count], ['Bus', $agence->bus_count], ['Agences', $agence->gares_count], ['Trajets', $agence->trajets_count]] as [$t, $v])
+        @foreach($chiffresCles as [$t, $v])
             <div class="bg-white rounded-2xl border border-slate-200/80 p-4">
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ $t }}</p>
                 <p class="text-xl font-black {{ $t === 'Statut' ? ($v === 'Actif' ? 'text-emerald-600' : 'text-rose-600') : 'text-slate-900' }}">{{ $v }}</p>
@@ -34,7 +39,7 @@
             @method('PUT')
             <h2 class="text-lg font-black text-slate-900">Réglages</h2>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nom de l'agence</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nom du partenaire</label>
                 <input name="nom_agence" value="{{ old('nom_agence', $agence->nom_agence) }}" required maxlength="100"
                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold">
             </div>
@@ -44,16 +49,20 @@
                     <input type="date" name="date_partenariat" required value="{{ old('date_partenariat', \Illuminate\Support\Carbon::parse($agence->date_partenariat)->toDateString()) }}"
                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold">
                 </div>
+                @unless($agence->estAerien())
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Âge max. enfant</label>
                     <input type="number" name="age_max_enfant" min="1" max="17" required value="{{ old('age_max_enfant', $agence->age_max_enfant) }}"
                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold">
                 </div>
+                @endunless
             </div>
+            @unless($agence->estAerien())
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" name="choix_siege" value="1" @checked(old('choix_siege', $agence->choix_siege)) class="w-5 h-5 rounded accent-emerald-600">
                 <span class="text-sm font-bold text-slate-700">Les clients choisissent leur siège</span>
             </label>
+            @endunless
             <div class="flex flex-wrap gap-3 pt-2">
                 <button class="px-5 py-2.5 rounded-xl bg-[#124231] text-white text-sm font-bold hover:bg-[#0c2f23]">Enregistrer</button>
             </div>

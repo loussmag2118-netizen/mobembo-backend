@@ -2,32 +2,52 @@
 
 namespace App\Http\Controllers\Admin\Canadian;
 
-use App\Http\Controllers\Controller;
-use App\Models\Utilisateur;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Flotte;
+use App\Models\Paiement;
+use App\Models\Reservation;
+use App\Models\Ville;
+use App\Models\Vol;
+use App\Services\ReservationVolService;
 
-class CanadianDashboardController extends Controller
+/**
+ * Tableau de bord d'une compagnie aérienne.
+ */
+class CanadianDashboardController extends EspaceAerienController
 {
-    /**
-     * Afficher le tableau de bord administrateur de Canadian Airways.
-     */
-    public function index()
+    public function index(ReservationVolService $reservations)
     {
-        // Utilisateur connecté (guard canadian)
-        $user = Auth::guard('canadian')->user();
+        $reservations->expirer();
+        $agenceId = $this->compagnieId();
 
-        // Statistiques
-        $totalClients      = Utilisateur::where('role', 'Client')->count();
-        $totalUtilisateurs = Utilisateur::count();
-        $totalAgents       = Utilisateur::where('role', 'Agent')->count();
-        $totalAdmins       = Utilisateur::where('role', 'Admin')->count();
+        $encaisse = Paiement::deLaCompagnie($agenceId)->where('statut', 'Reussi');
+        $stats = [
+            'chiffre_jour'  => (float) (clone $encaisse)->whereDate('created_at', today())->sum('montant'),
+            'chiffre_mois'  => (float) (clone $encaisse)->where('created_at', '>=', now()->startOfMonth())->sum('montant'),
+            'vols_a_venir'  => Vol::deLaCompagnie($agenceId)->where('statut', 'programme')->where('date_depart', '>', now())->count(),
+            'en_attente'    => Reservation::deLaCompagnie($agenceId)->where('statut', 'En_Attente')->count(),
+            'a_rembourser'  => Reservation::deLaCompagnie($agenceId)->where('statut', 'A_Rembourser')->count(),
+            'places_mois'   => (int) Reservation::deLaCompagnie($agenceId)->whereIn('statut', ['Paye', 'Confirmee'])
+                ->where('date_paiement', '>=', now()->startOfMonth())->sum('nombre_places'),
+        ];
 
-        return view('admin.canadian.dashboard', compact(
-            'user',
-            'totalClients',
-            'totalUtilisateurs',
-            'totalAgents',
-            'totalAdmins'
-        ));
+        $prochainsVols = Vol::deLaCompagnie($agenceId)->where('statut', 'programme')->where('date_depart', '>', now())
+            ->orderBy('date_depart')->limit(5)->get();
+        $dernieres = Reservation::deLaCompagnie($agenceId)->with('vol')->latest()->limit(5)->get();
+
+        // Étapes de démarrage tant que la compagnie n'est pas prête à vendre
+        $demarrage = [
+            ['Ajouter les aéroports desservis', Ville::where('actif', true)->count() >= 2, route('canadian.villes.index')],
+            ['Enregistrer un avion', Flotte::deLaCompagnie($agenceId)->exists(), route('canadian.flotte.create')],
+            ['Programmer un premier vol', Vol::deLaCompagnie($agenceId)->exists(), route('canadian.vols.create')],
+            ['Renseigner le service client', \App\Models\Parametre::deLaCompagnie($agenceId)->where('cle', 'telephone')->whereNotNull('valeur')->exists(), route('canadian.parametres.index')],
+        ];
+
+        return view('admin.canadian.dashboard', [
+            'compagnie'     => $this->compagnie(),
+            'stats'         => $stats,
+            'prochainsVols' => $prochainsVols,
+            'dernieres'     => $dernieres,
+            'demarrage'     => $demarrage,
+        ]);
     }
-} 
+}

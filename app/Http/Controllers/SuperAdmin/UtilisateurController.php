@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 /**
  * Clients inscrits sur les applications mobiles (consultation seule) :
  * transport par bus (table utilisateurs, rôle Client) et aérien
- * (comptes Canadian Airways qui ne sont pas administrateurs).
+ * (clients de l'application aérienne, table canadian_users).
  */
 class UtilisateurController extends Controller
 {
@@ -22,7 +22,7 @@ class UtilisateurController extends Controller
 
         $requete = $espace === 'bus'
             ? Utilisateur::where('role', 'Client')->withCount(['tickets as achats_count' => fn ($t) => $t->where('statut_paiement', 'Paye')])
-            : CanadianUser::where('est_admin', false)->withCount(['reservations as achats_count']);
+            : CanadianUser::query()->withCount(['reservations as achats_count']);
 
         if ($q !== '') {
             $requete->where(function ($w) use ($q, $espace) {
@@ -44,7 +44,7 @@ class UtilisateurController extends Controller
         // Chiffres de tout l'espace (pas seulement de la page)
         $base = fn () => $espace === 'bus'
             ? Utilisateur::where('role', 'Client')
-            : CanadianUser::where('est_admin', false);
+            : CanadianUser::query();
 
         $stats = [
             'total'        => $base()->count(),
@@ -54,7 +54,7 @@ class UtilisateurController extends Controller
         ];
         $totaux = [
             'bus'    => Utilisateur::where('role', 'Client')->count(),
-            'aerien' => CanadianUser::where('est_admin', false)->count(),
+            'aerien' => CanadianUser::query()->count(),
         ];
 
         return view('superadmin.utilisateurs.index', compact('utilisateurs', 'espace', 'q', 'statut', 'stats', 'totaux'));

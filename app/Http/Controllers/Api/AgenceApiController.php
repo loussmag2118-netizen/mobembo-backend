@@ -14,7 +14,8 @@ class AgenceApiController extends Controller
      */
     public function index()
     {
-        $agences = Agence::with(['logoMedia', 'photos'])
+        // Compagnies de bus seulement (les compagnies aériennes ont leur propre API)
+        $agences = Agence::deBus()->with(['logoMedia', 'photos'])
             ->where('statut', 'Actif')
             ->orderBy('nom_agence')
             ->get()

@@ -103,8 +103,10 @@ Route::get('/canadian/login', fn () => redirect()->route('unified.login'));
 // ================================================================
 Route::get('/admin', fn () => redirect()->route('admin.dashboard'))
     ->middleware('auth');
-Route::get('/canadian', fn () => redirect()->route('canadian.admin'))
-    ->middleware('auth:canadian');
+Route::get('/aerien', fn () => redirect()->route('canadian.admin'))
+    ->middleware('auth');
+// Anciennes adresses de l'espace aérien
+Route::get('/canadian/{chemin?}', fn () => redirect()->route('canadian.admin'))->where('chemin', '.*');
 Route::get('/superadmin', fn () => redirect()->route('superadmin.dashboard'))
     ->middleware('auth:superadmin');
 
@@ -149,15 +151,6 @@ Route::middleware('auth:superadmin')
         Route::get('/utilisateurs', [\App\Http\Controllers\SuperAdmin\UtilisateurController::class, 'index'])
             ->name('utilisateurs.index');
 
-        // Partenaire aérien (Canadian Airways) et ses administrateurs
-        Route::get('/aerien', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'index'])
-            ->name('aerien.index');
-        Route::post('/aerien/admins', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'ajouterAdmin'])
-            ->name('aerien.admins.store');
-        Route::post('/aerien/admins/{compte}/mot-de-passe', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'reinitialiserAdmin'])
-            ->name('aerien.admins.reinitialiser');
-        Route::delete('/aerien/admins/{compte}', [\App\Http\Controllers\SuperAdmin\AerienController::class, 'retirerAdmin'])
-            ->name('aerien.admins.retirer');
 
         // Référentiel des villes du transport terrestre (utilisé par les gares des agences)
         Route::patch('/villes/{ville}/toggle', [SuperAdminVilleController::class, 'toggle'])
@@ -169,7 +162,7 @@ Route::middleware('auth:superadmin')
 // ================================================================
 // ADMIN D'AGENCE (protégé) — Transport Terrestre
 // ================================================================
-Route::middleware(['auth', 'agence.active'])
+Route::middleware(['auth', 'agence.active', 'espace:bus'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -243,10 +236,11 @@ Route::middleware(['auth', 'agence.active'])
     });
 
 // ================================================================
-// CANADIAN AIRWAYS (protégé par guard canadian)
+// COMPAGNIE AÉRIENNE (administrateurs d'une agence de type « aerien »)
+// Les noms de routes « canadian.* » sont conservés pour les vues.
 // ================================================================
-Route::prefix('canadian')
-    ->middleware(['auth:canadian', 'canadian.admin'])
+Route::prefix('aerien')
+    ->middleware(['auth', 'agence.active', 'role:Admin', 'espace:aerien'])
     ->name('canadian.')
     ->group(function () {
 
@@ -264,9 +258,8 @@ Route::prefix('canadian')
 
         Route::get('paiements', [PaiementController::class, 'index'])->name('paiements.index');
         Route::get('paiements/export/csv', [PaiementController::class, 'export'])->name('paiements.export');
-        Route::get('paiements/{id}', [PaiementController::class, 'show'])->name('paiements.show');
 
-        Route::resource('flotte', FlotteController::class);
+        Route::resource('flotte', FlotteController::class)->except(['show']);
 
         Route::patch('promos/{id}/toggle', [PromoController::class, 'toggle'])->name('promos.toggle');
         Route::resource('promos', PromoController::class);
@@ -280,7 +273,6 @@ Route::prefix('canadian')
         Route::resource('classes', ClasseTarifaireController::class)->except(['show']);
 
         Route::get('passagers', [PassagerController::class, 'index'])->name('passagers.index');
-        Route::get('passagers/{id}', [PassagerController::class, 'show'])->name('passagers.show');
 
         Route::get('rapports', [RapportController::class, 'index'])->name('rapports.index');
         Route::get('rapports/generer', [RapportController::class, 'generer'])->name('rapports.generer');

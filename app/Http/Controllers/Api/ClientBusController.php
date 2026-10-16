@@ -158,6 +158,7 @@ class ClientBusController extends Controller
                     'prenom'              => $t->prenom_passager,
                     'categorie'           => $t->categorie_passager ?? 'Adulte',
                     'age'                 => $t->age_passager,
+                    'bebe'                => $t->bebe(),
                     'siege'               => $t->numero_siege,
                     'ville_depart'        => $t->ville_depart ?? $voyage?->trajet?->ville_depart,
                     'ville_arrivee'       => $t->ville_arrivee ?? $voyage?->trajet?->ville_arrivee,

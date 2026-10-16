@@ -91,6 +91,9 @@ class PlanificationVoyageController extends Controller
                 'agence_id'            => $p->agence_id,
                 'prix_enfant'          => $p->prix_enfant !== null ? (float) $p->prix_enfant : null, // null = prix adulte
                 'age_max_enfant'       => (int) ($p->agence?->age_max_enfant ?? 12),
+                // Bébé de 0 à 3 ans sur les genoux d'un adulte : assurance seulement
+                'assurance_bebe'       => (int) config('paiement.assurance_bebe', 5000),
+                'age_max_bebe'         => (int) config('paiement.age_max_bebe', 3),
                 'choix_siege'          => (bool) $p->agence?->choix_siege,
                 'trajet' => $p->trajet ? [
                     'id'            => $p->trajet->id,

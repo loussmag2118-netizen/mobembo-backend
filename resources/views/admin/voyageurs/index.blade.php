@@ -65,6 +65,9 @@
                                     <div>
                                         <div class="font-extrabold text-slate-900 text-base">{{ $v->nom }} {{ $v->prenom ?? '' }}</div>
                                         <div class="text-xs text-slate-400 mt-0.5 font-semibold">ID #{{ $v->id }}</div>
+                                        @if($v->bebe)
+                                            <div class="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-pink-700 bg-pink-50 px-2 py-0.5 rounded-full"><i class="fa-solid fa-baby"></i> {{ $v->bebe }}</div>
+                                        @endif
                                     </div>
                                 </div>
                             </td>

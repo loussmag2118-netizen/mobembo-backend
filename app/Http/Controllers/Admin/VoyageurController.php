@@ -53,6 +53,7 @@ class VoyageurController extends Controller
                 'statut_embarquement'=> $ticket->statut_embarquement,
                 'statut_paiement'    => $ticket->statut_paiement,
                 'billet_test'        => \App\Services\PaiementService::estReferenceTest($ticket->reference_paiement),
+                'bebe'               => $ticket->libelleBebe(),
             ];
         });
 

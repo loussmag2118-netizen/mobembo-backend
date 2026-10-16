@@ -36,4 +36,13 @@ return [
 
     'idempotence_minutes' => 30,
 
+    /*
+    | Bébés (0 à 3 ans) : ils voyagent sur les genoux d'un adulte, sans siège,
+    | et paient seulement une assurance (FCFA). À partir de 4 ans, l'enfant
+    | paie son billet et a sa place.
+    */
+
+    'assurance_bebe' => (int) env('ASSURANCE_BEBE', 5000),
+    'age_max_bebe'   => 3,
+
 ];

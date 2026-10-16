@@ -180,6 +180,7 @@ class AgentPresenceController extends Controller
                 'telephone'           => $ticket->telephone_passager,
                 'categorie'           => $ticket->categorie_passager ?? 'Adulte',   // vérifier l'âge d'un enfant
                 'age'                 => $ticket->age_passager,
+                'bebe'                => $ticket->bebe(),   // bébé sur les genoux : vérifier sa présence
                 'siege'               => $ticket->numero_siege,
 
                 // Voyage

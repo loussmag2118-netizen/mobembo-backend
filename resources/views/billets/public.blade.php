@@ -79,6 +79,9 @@
                     <div><dt class="text-xs font-bold text-slate-400">Heure de départ</dt><dd class="font-extrabold text-slate-900">{{ $heure ?? '—' }}</dd></div>
                     <div><dt class="text-xs font-bold text-slate-400">Passager</dt><dd class="font-extrabold text-slate-900">{{ $passager }}</dd></div>
                     <div><dt class="text-xs font-bold text-slate-400">Catégorie</dt><dd class="font-extrabold text-slate-900">{{ ($ticket->categorie_passager ?? 'Adulte') === 'Enfant' ? 'Enfant (' . $ticket->age_passager . ' ans)' : 'Adulte' }}</dd></div>
+                    @if($ticket->bebe_nom)
+                        <div class="col-span-2 rounded-xl bg-pink-50 px-3 py-2"><dt class="text-xs font-bold text-pink-400">Bébé sur les genoux (assurance payée)</dt><dd class="font-extrabold text-slate-900">{{ \Illuminate\Support\Str::after($ticket->libelleBebe(), 'Bébé : ') }}</dd></div>
+                    @endif
                     @if($ticket->numero_siege)
                         <div><dt class="text-xs font-bold text-slate-400">Siège</dt><dd class="font-extrabold text-slate-900">{{ $ticket->numero_siege }}</dd></div>
                     @endif

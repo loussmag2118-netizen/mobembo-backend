@@ -58,6 +58,12 @@ class Ticket extends Model
         // === Dates ===
         'date_reservation',
         'expire_le',              // fin de la réservation temporaire (En_Attente)
+
+        // === Bébé sur les genoux de ce passager (0 à 3 ans) ===
+        'bebe_nom',
+        'bebe_prenom',
+        'bebe_age',
+        'assurance_bebe',
     ];
 
     protected $casts = [
@@ -197,5 +203,32 @@ class Ticket extends Model
     public function getEstPresentAttribute()
     {
         return $this->statut_embarquement === 'Present';
+    }
+
+    /** Bébé sur les genoux de ce passager (null s'il n'y en a pas). */
+    public function bebe(): ?array
+    {
+        if (! $this->bebe_nom) {
+            return null;
+        }
+
+        return [
+            'nom'       => $this->bebe_nom,
+            'prenom'    => $this->bebe_prenom,
+            'age'       => $this->bebe_age,
+            'assurance' => (float) $this->assurance_bebe,
+        ];
+    }
+
+    /** Ex. « Bébé : Grâce MOUKALA, 2 ans » */
+    public function libelleBebe(): ?string
+    {
+        if (! $this->bebe_nom) {
+            return null;
+        }
+        $age = (int) $this->bebe_age;
+
+        return 'Bébé : ' . trim(($this->bebe_prenom ?? '') . ' ' . $this->bebe_nom) . ', '
+            . ($age === 0 ? 'moins d\'1 an' : $age . ' an' . ($age > 1 ? 's' : ''));
     }
 }

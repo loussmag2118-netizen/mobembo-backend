@@ -10,8 +10,8 @@
             <input name="modele" required maxlength="100" value="{{ old('modele', $flotte->modele) }}" placeholder="Ex : Boeing 737-800" class="{{ $champ }}">
         </div>
         <div>
-            <label class="{{ $etiquette }}">Immatriculation</label>
-            <input name="immatriculation" maxlength="20" value="{{ old('immatriculation', $flotte->immatriculation) }}" placeholder="Ex : TN-AJB" class="{{ $champ }} font-mono uppercase">
+            <label class="{{ $etiquette }}">Immatriculation *</label>
+            <input name="immatriculation" required maxlength="20" value="{{ old('immatriculation', $flotte->immatriculation) }}" placeholder="Ex : TN-AJB" class="{{ $champ }} font-mono uppercase">
         </div>
         <div>
             <label class="{{ $etiquette }}">Nombre de sièges *</label>

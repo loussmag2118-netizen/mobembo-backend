@@ -72,16 +72,17 @@ class FlotteController extends EspaceAerienController
 
     private function valider(Request $request, ?Flotte $flotte = null): array
     {
-        $request->merge(['immatriculation' => $request->filled('immatriculation') ? strtoupper(trim($request->immatriculation)) : null]);
+        $request->merge(['immatriculation' => strtoupper(trim((string) $request->immatriculation))]);
 
         return $request->validate([
             'modele'          => 'required|string|max:100',
-            'immatriculation' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z0-9]{1,2}-?[A-Z0-9]{2,5}$/', Rule::unique('flottes', 'immatriculation')->ignore($flotte?->id)],
+            'immatriculation' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9]{1,2}-?[A-Z0-9]{2,5}$/', Rule::unique('flottes', 'immatriculation')->ignore($flotte?->id)],
             'capacite_places' => 'required|integer|min:1|max:900',
             'annee'           => 'nullable|integer|min:1950|max:' . (date('Y') + 1),
             'statut'          => ['required', Rule::in(array_keys(self::STATUTS))],
         ], [
-            'modele.required'        => 'Indiquez le modèle (ex. Boeing 737-800).',
+            'modele.required'          => 'Indiquez le modèle (ex. Boeing 737-800).',
+            'immatriculation.required' => 'Indiquez l\'immatriculation de l\'avion (ex. TN-AJB).',
             'immatriculation.regex'  => 'Immatriculation attendue au format TN-AJB (préfixe pays, tiret, lettres).',
             'immatriculation.unique' => 'Cette immatriculation est déjà enregistrée.',
         ]);

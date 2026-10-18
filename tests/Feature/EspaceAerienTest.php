@@ -193,6 +193,8 @@ class EspaceAerienTest extends TestCase
         $this->post('/aerien/villes', ['nom' => 'Brazzaville', 'code_iata' => 'bzv', 'pays' => 'Congo', 'actif' => 1])->assertSessionHasNoErrors();
         $this->post('/aerien/villes', ['nom' => 'Pointe-Noire', 'code_iata' => 'PNR', 'pays' => 'Congo', 'actif' => 1])->assertSessionHasNoErrors();
         $this->post('/aerien/flotte', ['modele' => 'Boeing 737-800', 'immatriculation' => 'tn-ajb', 'capacite_places' => 150, 'statut' => 'Actif'])->assertSessionHasNoErrors();
+        // Sans immatriculation : refusé proprement (la base l'exige)
+        $this->post('/aerien/flotte', ['modele' => 'Airbus A320', 'capacite_places' => 180, 'statut' => 'Actif'])->assertSessionHasErrors('immatriculation');
 
         $donnees = [
             'numero_vol' => 'ca 101', 'aeroport_depart' => Ville::where('code_iata', 'BZV')->value('id'),
